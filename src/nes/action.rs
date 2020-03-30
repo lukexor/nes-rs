@@ -16,7 +16,7 @@ pub enum Action {
     // TogglePause, ToggleFastForward, IncSpeed, DecSpeed, Rewind, ToggleFullscreen,
     // ToggleSound, ToggleNtscVideo, ToggleVsync, ToggleRecording, Screenshot,
     // Save slot (1-4)
-    SelectUp, SelectDown, SelectPath, LoadRom(PathBuf),
+    SelectUp, SelectDown, SelectLeft, SelectRight, SelectPath, LoadRom(PathBuf),
     CloseView, OpenView(ViewType),
     // SetSaveSlot(u8), SaveState, LoadState, Quit, Reset, PowerCycle,
     // IncLogLevel, DecLogLevel, DebugScanlineUp, DebugScanlineDown,

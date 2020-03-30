@@ -30,7 +30,7 @@ pub fn find_roms<P: AsRef<Path>>(path: &P) -> NesResult<Vec<PathBuf>> {
 }
 
 /// Returns a list of recently played roms, ordered by last played
-pub fn get_recent_roms() -> NesResult<Vec<(PathBuf, Image)>> {
+pub fn get_recent_roms() -> NesResult<Vec<(PathBuf, PathBuf)>> {
     // Load recents file to get a list of recent rom paths
     let recents_dir = config_dir().join(RECENTS);
     let recents_path = recents_dir.join(RECENTS).with_extension("dat");
@@ -44,13 +44,12 @@ pub fn get_recent_roms() -> NesResult<Vec<(PathBuf, Image)>> {
     }
 
     // Load rom path and image into a list
-    let mut results: Vec<(PathBuf, Image)> = Vec::new();
+    let mut results: Vec<(PathBuf, PathBuf)> = Vec::new();
     for rom in recents {
         let rom_path = PathBuf::from(rom);
         let rom_file = rom_path.file_name().expect("valid rom");
-        let image_file = recents_dir.join(rom_file).with_extension("png");
-        let image = Image::from_file(image_file.to_str().unwrap())?;
-        results.push((rom_path, image));
+        let image_path = recents_dir.join(rom_file).with_extension("png");
+        results.push((rom_path, image_path));
     }
     Ok(results)
 }

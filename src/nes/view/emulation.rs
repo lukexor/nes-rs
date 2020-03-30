@@ -32,6 +32,7 @@ pub struct EmulationView {
     width: u32,
     height: u32,
     deck: ControlDeck,
+    loaded_title: String,
     running_time: f32,
     paused: bool,
     keybindings: Vec<Keybind>,
@@ -46,17 +47,22 @@ impl EmulationView {
             width,
             height,
             deck: ControlDeck::with_config(config),
+            loaded_title: String::new(),
             running_time: 0.0,
             paused: false,
             keybindings: Vec::new(),
         }
     }
 
-    pub fn load_rom<P: AsRef<Path>>(&mut self, path: &P) -> NesResult<()> {
+    fn load_rom<P: AsRef<Path>>(&mut self, path: &P) -> NesResult<()> {
         let path = path.as_ref();
         let rom =
             File::open(path).map_err(|e| map_nes_err!("unable to open file {:?}: {}", path, e))?;
         let mut rom = BufReader::new(rom);
+        if let Some(path) = path.file_name().and_then(|s| s.to_str()) {
+            self.loaded_title = path.to_string();
+            println!("Loading {:?}", self.loaded_title);
+        }
         self.deck
             .load_rom(&path.to_string_lossy(), &mut rom)
             .map_err(|e| map_nes_err!("failed to load rom {:?}: {}", path, e))?;
@@ -65,7 +71,7 @@ impl EmulationView {
         Ok(())
     }
 
-    pub fn unload_rom<P: AsRef<Path>>(&mut self, path: &P) -> NesResult<()> {
+    fn unload_rom<P: AsRef<Path>>(&mut self, path: &P) -> NesResult<()> {
         let path = path.as_ref();
         self.save_sram(&path)?;
         self.deck.power_off();
@@ -111,7 +117,7 @@ impl EmulationView {
         Ok(())
     }
 
-    pub fn step_emulation(&mut self, elapsed: f32, state: &mut NesState, data: &mut StateData) {
+    fn step_emulation(&mut self, elapsed: f32, state: &mut NesState, data: &mut StateData) {
         if !self.paused {
             self.running_time += elapsed;
             self.deck.clock_frame();
@@ -122,7 +128,7 @@ impl EmulationView {
         }
     }
 
-    pub fn update_view(&self, data: &mut StateData) -> NesResult<()> {
+    fn update_view(&self, data: &mut StateData) -> NesResult<()> {
         // TODO change this to draw_image
         data.copy_texture(TEXTURE_NAME, &self.deck.frame())?;
         Ok(())

@@ -16,7 +16,14 @@ use std::{ffi::OsStr, path::PathBuf};
 const TEXTURE_NAME: &str = "open_rom";
 const WIDTH: u32 = 3 * RENDER_WIDTH;
 const HEIGHT: u32 = 3 * RENDER_HEIGHT;
-const MAX_ROWS: usize = (HEIGHT as usize - 63) / 30 - 1;
+const MAX_ROWS: usize = 19;
+const MAX_RECENTS: usize = 2;
+
+#[derive(PartialEq, Eq)]
+enum OpenMode {
+    NewFile,
+    Recent,
+}
 
 pub struct OpenRomView {
     x: u32,
@@ -27,7 +34,8 @@ pub struct OpenRomView {
     selected: usize,
     scroll: usize,
     paths: Vec<PathBuf>,
-    recent_roms: Vec<(PathBuf, Image)>,
+    recent_roms: Vec<(PathBuf, PathBuf)>,
+    mode: OpenMode,
     image: ImageRef,
     keybindings: Vec<Keybind>,
 }
@@ -44,6 +52,7 @@ impl OpenRomView {
             scroll: 0,
             paths: Vec::new(),
             recent_roms: Vec::new(),
+            mode: OpenMode::Recent,
             image: Image::new_ref(WIDTH, HEIGHT),
             keybindings: Vec::new(),
         }
@@ -66,6 +75,8 @@ impl OpenRomView {
             (Key::Down, pressed, !repeat, None, Action::SelectDown),
             (Key::Down, pressed, repeat, None, Action::SelectDown),
             (Key::Return, pressed, !repeat, None, Action::SelectPath),
+            (Key::Right, pressed, !repeat, None, Action::SelectRight),
+            (Key::Left, pressed, !repeat, None, Action::SelectLeft),
         ];
         for (key, pressed, repeat, modifiers, action) in &default_bindings {
             let keybind = Keybind::new(
@@ -91,40 +102,111 @@ impl OpenRomView {
 
         // Load recently played games
         self.recent_roms = filesystem::get_recent_roms()?;
+        if self.recent_roms.is_empty() {
+            self.mode = OpenMode::NewFile;
+        }
         Ok(())
     }
 
     fn render_view(&mut self, data: &mut StateData) -> NesResult<()> {
         data.set_draw_target(self.image.clone());
-        data.fill(Pixel([0, 0, 0, 128]));
-        let (mut x, mut y) = (0, 0);
-        data.fill_rect(x, y, WIDTH, HEIGHT, pixel::VERY_DARK_GRAY);
-        x += 3;
-        y += 3;
-        data.fill_rect(x, y, WIDTH, HEIGHT, pixel::DARK_GRAY);
-        x += 10;
-        y += 10;
+        let (mut x, mut y) = (20, 20);
+        data.fill_rect(x, y, WIDTH - 2 * x, HEIGHT - 2 * y, pixel::DARK_GRAY);
+        let border = 20;
+        x += border;
+        y += border;
         data.set_draw_scale(3);
-        data.draw_string(x, y, "Open File", pixel::WHITE);
-        y += 50;
+        let file_w = 9 * 8 * 3 - 3;
+        let file_color = if self.mode == OpenMode::NewFile {
+            pixel::WHITE
+        } else {
+            pixel::GRAY
+        };
+        data.draw_string(x, y, "Open File", file_color);
+        let pad = 2 * 8 * 3;
+        let recent_color = if self.mode == OpenMode::Recent {
+            pixel::WHITE
+        } else {
+            pixel::GRAY
+        };
+        data.draw_string(x + file_w + pad, y, "Open Recent", recent_color);
+        let hr_color = pixel::VERY_DARK_GRAY;
+        let hr_w = 3;
+        let y_pad = 40;
+        data.fill_rect(
+            x + file_w + (pad / 2),
+            border + 10,
+            hr_w,
+            y_pad + 10,
+            hr_color,
+        ); // Title separator
+        y += y_pad;
+        data.fill_rect(border + 10, y, WIDTH - 2 * (border + 10), hr_w, hr_color); // Title HR
+        x += 10;
+        y += 20;
         data.set_draw_scale(2);
-        for (i, rom) in self.paths[self.scroll..].iter().enumerate() {
-            if y > HEIGHT - 30 {
-                break;
+        match self.mode {
+            OpenMode::NewFile => {
+                let max = std::cmp::min(self.paths.len(), self.scroll + MAX_ROWS);
+                for (i, rom) in self.paths[self.scroll..max].iter().enumerate() {
+                    let color = if i == self.selected - self.scroll {
+                        pixel::BLUE
+                    } else {
+                        pixel::WHITE
+                    };
+                    if rom == &PathBuf::from("../") {
+                        data.draw_string(x, y, "../", color);
+                        y += 30;
+                    } else if let Some(path) = rom.file_name().and_then(|file| file.to_str()) {
+                        data.draw_string(x, y, &path.to_string(), color);
+                        y += 30;
+                    }
+                }
             }
-            let color = if i == self.selected - self.scroll {
-                pixel::BLUE
-            } else {
-                pixel::WHITE
-            };
-            if rom == &PathBuf::from("../") {
-                data.draw_string(x, y, "../", color);
-                y += 30;
-            } else if let Some(path) = rom.file_name().and_then(|file| file.to_str()) {
-                data.draw_string(x, y, &path.to_string(), color);
-                y += 30;
+            OpenMode::Recent => {
+                let max = std::cmp::min(self.recent_roms.len(), self.scroll + MAX_RECENTS);
+                for (i, (rom, image)) in self.recent_roms[self.scroll..max].iter().enumerate() {
+                    let color = if i == self.selected - self.scroll {
+                        pixel::BLUE
+                    } else {
+                        pixel::WHITE
+                    };
+                    let mut rom = rom.clone();
+                    rom.set_extension("");
+                    if let Some(image) = image.to_str() {
+                        let image = Image::from_file(image)?;
+                        data.draw_image(x, y, &image);
+                        y += image.height() * 2 + 10;
+                    }
+                    if let Some(path) = rom.file_name().and_then(|file| file.to_str()) {
+                        data.draw_string(x, y, &path.to_string(), color);
+                        y += 40;
+                    }
+                }
             }
         }
+
+        // Darken edges
+        let darken = Pixel([0, 0, 0, 128]);
+        data.fill_rect(0, 0, WIDTH, border, darken); // Top border
+        data.fill_rect(WIDTH - border, 0, WIDTH, HEIGHT, darken); // Right border
+        data.fill_rect(0, HEIGHT - border, WIDTH, HEIGHT, darken); // Bottom border
+        data.fill_rect(0, 0, border, HEIGHT, darken); // Left border
+
+        // Window highlight
+        let highlight = pixel::GRAY;
+        let shadow = pixel::VERY_DARK_GRAY;
+        let stroke = 3;
+        let width = WIDTH - 2 * border;
+        let height = HEIGHT - 2 * border;
+        let left = border;
+        let right = WIDTH - border;
+        let top = border;
+        let bottom = HEIGHT - border;
+        data.fill_rect(right - stroke, top, stroke, height, shadow); // Right border
+        data.fill_rect(left, top, stroke, height, highlight); // Left border
+        data.fill_rect(left, bottom - stroke, width, stroke, shadow); // Bottom border
+        data.fill_rect(left, top, width, stroke, highlight); // Top border
         Ok(())
     }
 }
@@ -139,6 +221,7 @@ impl Viewable for OpenRomView {
         )?;
         self.load_keybindings();
         self.load_paths(state)?;
+        self.render_view(data)?;
         Ok(true)
     }
 
@@ -150,7 +233,6 @@ impl Viewable for OpenRomView {
     ) -> NesResult<bool> {
         // Update view
         if self.active {
-            self.render_view(data)?;
             data.copy_draw_target(TEXTURE_NAME)?;
         }
         Ok(true)
@@ -176,7 +258,7 @@ impl Viewable for OpenRomView {
         &mut self,
         event: &PixEvent,
         state: &mut NesState,
-        _data: &mut StateData,
+        data: &mut StateData,
     ) -> NesResult<bool> {
         let keybind = self
             .keybindings
@@ -199,17 +281,37 @@ impl Viewable for OpenRomView {
                         }
                     }
                     Action::SelectDown => {
-                        if self.selected < self.paths.len() - 1 {
+                        let (scroll_max, total) = match self.mode {
+                            OpenMode::NewFile => (MAX_ROWS - 1, self.paths.len() - 1),
+                            OpenMode::Recent => (MAX_RECENTS - 1, self.recent_roms.len() - 1),
+                        };
+                        if self.selected < total {
                             self.selected += 1;
-                            if self.selected - self.scroll >= MAX_ROWS
-                                && self.scroll < self.selected - MAX_ROWS
-                            {
+                            // Should scroll when there is one item left in view
+                            let should_scroll = self.selected - self.scroll >= scroll_max;
+                            if should_scroll {
                                 self.scroll += 1;
                             }
                         }
                     }
+                    Action::SelectLeft => {
+                        self.selected = 0;
+                        self.scroll = 0;
+                        self.mode = OpenMode::NewFile;
+                    }
+                    Action::SelectRight => {
+                        self.selected = 0;
+                        self.scroll = 0;
+                        self.mode = OpenMode::Recent;
+                    }
                     Action::SelectPath => {
-                        let path = &self.paths[self.selected];
+                        let path = match self.mode {
+                            OpenMode::NewFile => &self.paths[self.selected],
+                            OpenMode::Recent => {
+                                let (rom, _) = &self.recent_roms[self.selected];
+                                rom
+                            }
+                        };
                         if path.is_dir() {
                             if path == &PathBuf::from("../") {
                                 let current_path = &state.prefs.current_path;
@@ -229,6 +331,7 @@ impl Viewable for OpenRomView {
                     _ => state.queue_action(keybind.action.clone()),
                 }
             }
+            self.render_view(data)?;
             Ok(true)
         } else {
             Ok(false)
