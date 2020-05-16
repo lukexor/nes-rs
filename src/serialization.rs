@@ -6,7 +6,9 @@
 use crate::{control_deck::MapperType, nes_err, NesResult, MAJOR_VERSION};
 use enum_dispatch::enum_dispatch;
 use std::{
-    collections::VecDeque,
+    cmp::Eq,
+    collections::{HashSet, VecDeque},
+    hash::{BuildHasher, Hash},
     io::{Read, Write},
 };
 
@@ -336,6 +338,12 @@ impl<T: Savable + Default> Savable for Option<T> {
 
 impl Savable for String {
     fn save<F: Write>(&self, fh: &mut F) -> NesResult<()> {
+        let len: usize = self.len();
+        if len > std::u32::MAX as usize {
+            return nes_err!("Unable to save more than {} bytes", std::u32::MAX);
+        }
+        let len = len as u32;
+        len.save(fh)?;
         self.as_bytes().save(fh)?;
         Ok(())
     }
@@ -352,6 +360,40 @@ impl Savable for String {
                 len,
                 self.len() as u32
             );
+        }
+        Ok(())
+    }
+}
+
+impl<T: Savable + Default + Eq + Hash, S: BuildHasher + Default> Savable for HashSet<T, S> {
+    fn save<F: Write>(&self, fh: &mut F) -> NesResult<()> {
+        let len: usize = self.len();
+        if len > std::u32::MAX as usize {
+            return nes_err!("Unable to save more than {} bytes", std::u32::MAX);
+        }
+        let len = len as u32;
+        len.save(fh)?;
+        for i in self.iter() {
+            i.save(fh)?;
+        }
+        Ok(())
+    }
+    fn load<F: Read>(&mut self, fh: &mut F) -> NesResult<()> {
+        let mut len = 0u32;
+        len.load(fh)?;
+        if self.is_empty() {
+            *self = HashSet::with_capacity_and_hasher(len as usize, Default::default());
+        } else if len != self.len() as u32 {
+            return nes_err!(
+                "HashSet read len does not match. Got {}, expected {}",
+                len,
+                self.len() as u32
+            );
+        }
+        for _ in 0..len {
+            let mut val = T::default();
+            val.load(fh)?;
+            self.insert(val);
         }
         Ok(())
     }

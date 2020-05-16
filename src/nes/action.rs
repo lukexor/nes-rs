@@ -13,13 +13,15 @@ pub enum Action {
     // Player inputs (1-4)
     PA(u8), PB(u8), PATurbo(u8), PBTurbo(u8), PSelect(u8), PStart(u8),
     PUp(u8), PDown(u8), PLeft(u8), PRight(u8),
-    TogglePause, ToggleFastForward, IncSpeed, DecSpeed, Rewind, ToggleFullscreen,
-    ToggleSound, ToggleNtscVideo, ToggleVsync, ToggleRecording, Screenshot,
+    // TogglePause, ToggleFastForward, IncSpeed, DecSpeed, Rewind, ToggleFullscreen,
+    // ToggleSound, ToggleNtscVideo, ToggleVsync, ToggleRecording, Screenshot,
     // Save slot (1-4)
-    SetSaveSlot(u8), SaveState, LoadState, SelectPath, LoadRom(PathBuf), Quit, Reset, PowerCycle,
-    CloseView, OpenView(ViewType), IncLogLevel, DecLogLevel, DebugScanlineUp, DebugScanlineDown,
-    SelectUp, SelectDown, DebugStepInto, DebugStepOver, DebugStepOut, DebugStepScanline,
-    DebugStepFrame,
+    SelectUp, SelectDown, SelectPath, LoadRom(PathBuf),
+    CloseView, OpenView(ViewType),
+    // SetSaveSlot(u8), SaveState, LoadState, Quit, Reset, PowerCycle,
+    // IncLogLevel, DecLogLevel, DebugScanlineUp, DebugScanlineDown,
+    // DebugStepInto, DebugStepOver, DebugStepOut, DebugStepScanline,
+    // DebugStepFrame,
 }
 
 impl Nes {

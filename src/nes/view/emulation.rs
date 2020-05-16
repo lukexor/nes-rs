@@ -9,9 +9,11 @@ use crate::{
     },
     NesResult,
 };
+use chrono::prelude::{DateTime, Local};
 use pix_engine::{
     draw::Rect,
     event::{Key, PixEvent},
+    image::Image,
     pixel::ColorType,
     StateData,
 };
@@ -74,9 +76,8 @@ impl EmulationView {
         if self.deck.uses_sram() {
             let sram_path = filesystem::sram_path(path)?;
             if sram_path.exists() {
-                let sram_file = File::open(&sram_path).map_err(|e| {
-                    map_nes_err!("failed to open file {:?}: {}", sram_path.display(), e)
-                })?;
+                let sram_file = File::open(&sram_path)
+                    .map_err(|e| map_nes_err!("failed to open file {:?}: {}", sram_path, e))?;
                 let mut sram = BufReader::new(sram_file);
                 self.deck.load_sram(&mut sram)?;
             }
@@ -90,7 +91,7 @@ impl EmulationView {
             let sram_dir = sram_path.parent().expect("sram path shouldn't be root"); // Safe to do because sram_path is never root
             if !sram_dir.exists() {
                 std::fs::create_dir_all(sram_dir).map_err(|e| {
-                    map_nes_err!("failed to create directory {:?}: {}", sram_dir.display(), e)
+                    map_nes_err!("failed to create directory {:?}: {}", sram_dir, e)
                 })?;
             }
             let mut sram_opts = std::fs::OpenOptions::new()
@@ -98,9 +99,7 @@ impl EmulationView {
                 .write(true)
                 .create(true)
                 .open(&sram_path)
-                .map_err(|e| {
-                    map_nes_err!("failed to open file {:?}: {}", sram_path.display(), e)
-                })?;
+                .map_err(|e| map_nes_err!("failed to open file {:?}: {}", sram_path, e))?;
 
             let exists = sram_opts.metadata()?.len() > 0;
             if exists {
@@ -173,6 +172,24 @@ impl EmulationView {
         let config = Config::from_prefs(&prefs);
         self.deck.set_config(config);
     }
+
+    // TODO Scale screenshot to current width/height
+    fn screenshot(&mut self) -> NesResult<()> {
+        let datetime: DateTime<Local> = Local::now();
+        let filename = datetime
+            .format("Screen_Shot_%Y-%m-%d_at_%H_%M_%S")
+            .to_string();
+        let image = Image::from_bytes(RENDER_WIDTH, RENDER_HEIGHT, &self.deck.frame())?;
+        image.save_to_file(&filename)?;
+        println!("Saved screenshot: {:?}", filename);
+        Ok(())
+    }
+
+    fn add_recent_rom<P: AsRef<Path>>(&mut self, path: &P) -> NesResult<()> {
+        let image = Image::from_bytes(RENDER_WIDTH, RENDER_HEIGHT, &self.deck.frame())?;
+        filesystem::add_recent_rom(path, image)?;
+        Ok(())
+    }
 }
 
 impl Viewable for EmulationView {
@@ -209,6 +226,7 @@ impl Viewable for EmulationView {
         // TODO save_replay
         self.paused = true;
         if let Some(rom) = &state.loaded_rom {
+            self.add_recent_rom(rom)?;
             self.unload_rom(rom)?;
         }
         Ok(true)

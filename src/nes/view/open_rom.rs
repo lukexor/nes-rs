@@ -26,8 +26,8 @@ pub struct OpenRomView {
     active: bool,
     selected: usize,
     scroll: usize,
-    scroll_max: usize,
     paths: Vec<PathBuf>,
+    recent_roms: Vec<(PathBuf, Image)>,
     image: ImageRef,
     keybindings: Vec<Keybind>,
 }
@@ -42,8 +42,8 @@ impl OpenRomView {
             active: false,
             selected: 0,
             scroll: 0,
-            scroll_max: 1,
             paths: Vec::new(),
+            recent_roms: Vec::new(),
             image: Image::new_ref(WIDTH, HEIGHT),
             keybindings: Vec::new(),
         }
@@ -77,17 +77,20 @@ impl OpenRomView {
         }
     }
 
-    fn load_files(&mut self, state: &mut NesState) -> NesResult<()> {
+    fn load_paths(&mut self, state: &mut NesState) -> NesResult<()> {
+        // Look up directories and .nes files in current_path
         self.paths = Vec::new();
         if state.prefs.current_path.parent().is_some() {
             self.paths.push(PathBuf::from("../"));
         }
-        // TODO: catch errors to display message
+        // TODO: catch errors to display message instead of propagating
         self.paths
             .extend(filesystem::list_dirs(&state.prefs.current_path)?);
         self.paths
             .extend(filesystem::find_roms(&state.prefs.current_path)?);
-        self.scroll_max = self.paths.len() + 1;
+
+        // Load recently played games
+        self.recent_roms = filesystem::get_recent_roms()?;
         Ok(())
     }
 
@@ -135,7 +138,7 @@ impl Viewable for OpenRomView {
             Rect::new(self.x, self.y, self.width, self.height),
         )?;
         self.load_keybindings();
-        self.load_files(state)?;
+        self.load_paths(state)?;
         Ok(true)
     }
 
@@ -216,7 +219,7 @@ impl Viewable for OpenRomView {
                             } else {
                                 state.prefs.current_path = path.clone();
                             }
-                            self.load_files(state)?;
+                            self.load_paths(state)?;
                             self.selected = 0;
                             self.scroll = 0;
                         } else if path.extension() == Some(OsStr::new("nes")) {
