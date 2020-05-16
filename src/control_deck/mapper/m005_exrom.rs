@@ -3,14 +3,14 @@
 //! [https://wiki.nesdev.com/w/index.php/ExROM]()
 //! [https://wiki.nesdev.com/w/index.php/MMC5]()
 
+use super::{Mapper, MapperType, Mirroring};
 use crate::{
-    apu::{
+    cartridge::Cartridge,
+    common::{Addr, Clocked, Powered},
+    control_deck::apu::{
         dmc::Dmc,
         pulse::{Pulse, PulseChannel},
     },
-    cartridge::Cartridge,
-    common::{Addr, Clocked, Powered},
-    mapper::{Mapper, MapperType, Mirroring},
     memory::{BankedMemory, MemRead, MemWrite},
     serialization::Savable,
     NesResult,

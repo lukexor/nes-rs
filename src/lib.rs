@@ -450,6 +450,8 @@
 //! [sdl2]: https://www.libsdl.org/
 //! [wasm]: https://webassembly.org/
 
+#![allow(dead_code)]
+// #![warn(missing_debug_implementations, rust_2018_idioms, missing_docs)]
 #![doc(
     html_favicon_url = "https://raw.githubusercontent.com/lukexor/tetanes/master/static/tetanes_icon.png"
 )]
@@ -460,18 +462,13 @@
 use pix_engine::PixEngineErr;
 use std::fmt;
 
-pub mod apu;
-pub mod bus;
 pub mod cartridge;
+pub mod control_deck;
 #[macro_use]
 pub mod common;
-pub mod cpu;
-pub mod filter;
 pub mod input;
-pub mod mapper;
 pub mod memory;
 pub mod nes;
-pub mod ppu;
 pub mod serialization;
 
 pub type NesResult<T> = std::result::Result<T, NesErr>;

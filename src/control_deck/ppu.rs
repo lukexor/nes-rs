@@ -4,7 +4,7 @@
 
 use crate::{
     common::{Addr, Byte, Clocked, NesFormat, Powered},
-    mapper::{Mapper, MapperType},
+    control_deck::mapper::{Mapper, MapperType},
     memory::{MemRead, MemWrite},
     serialization::Savable,
     NesResult,

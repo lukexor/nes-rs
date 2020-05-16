@@ -3,9 +3,8 @@
 //! [http://wiki.nesdev.com/w/index.php/CPU]()
 
 use crate::{
-    bus::Bus,
     common::{Addr, Byte, Clocked, Powered},
-    mapper::Mapper,
+    control_deck::{bus::Bus, mapper::Mapper},
     memory::{MemRead, MemWrite},
     serialization::Savable,
     NesResult,
@@ -93,7 +92,7 @@ pub struct Cpu {
 }
 
 impl Cpu {
-    pub fn init(bus: Bus) -> Self {
+    pub fn new(bus: Bus) -> Self {
         Self {
             cycle_count: 0,
             step: 0,

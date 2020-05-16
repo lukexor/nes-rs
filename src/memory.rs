@@ -2,7 +2,7 @@
 
 use crate::{
     common::{Addr, Byte},
-    mapper::*,
+    control_deck::mapper::MapperType,
     serialization::Savable,
     NesResult,
 };

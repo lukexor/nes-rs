@@ -1,11 +1,6 @@
 //! Utils and Traits shared among modules
 
-use crate::{
-    nes_err,
-    ppu::{RENDER_HEIGHT, RENDER_WIDTH},
-    serialization::Savable,
-    NesResult,
-};
+use crate::{control_deck::MapperType, nes_err, serialization::Savable, NesResult};
 use enum_dispatch::enum_dispatch;
 use std::{
     io::{BufWriter, Read, Write},
@@ -97,7 +92,12 @@ pub fn home_dir() -> Option<PathBuf> {
 ///
 /// It's possible for this method to fail, but instead of erroring the program,
 /// it'll simply log the error out to STDERR
-pub fn create_png<P: AsRef<Path>>(png_path: &P, pixels: &[u8]) -> NesResult<String> {
+pub fn create_png<P: AsRef<Path>>(
+    png_path: &P,
+    pixels: &[u8],
+    width: u32,
+    height: u32,
+) -> NesResult<String> {
     let png_path = png_path.as_ref();
     let png_file = std::fs::File::create(&png_path);
     if png_file.is_err() {
@@ -108,7 +108,7 @@ pub fn create_png<P: AsRef<Path>>(png_path: &P, pixels: &[u8]) -> NesResult<Stri
         );
     }
     let png_file = BufWriter::new(png_file.unwrap()); // Safe to unwrap
-    let mut png = png::Encoder::new(png_file, RENDER_WIDTH, RENDER_HEIGHT);
+    let mut png = png::Encoder::new(png_file, width, height);
     png.set_color(png::ColorType::RGB);
     let writer = png.write_header();
     if let Err(e) = writer {

@@ -3,7 +3,7 @@
 //! Converts primative types and arrays of primatives from/to Big-Endian byte arrays and writes
 //! them to a file handle that implements Read/Write.
 
-use crate::{mapper::*, nes_err, NesResult};
+use crate::{control_deck::MapperType, nes_err, NesResult};
 use enum_dispatch::enum_dispatch;
 use std::{
     collections::VecDeque,

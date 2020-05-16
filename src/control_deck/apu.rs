@@ -4,9 +4,11 @@
 
 use crate::{
     common::{Clocked, Powered},
-    cpu::CPU_CLOCK_RATE,
-    filter::{Filter, FilterType, HiPassFilter, LoPassFilter},
-    mapper::MapperType,
+    control_deck::{
+        cpu::CPU_CLOCK_RATE,
+        filter::{Filter, FilterType, HiPassFilter, LoPassFilter},
+        mapper::MapperType,
+    },
     memory::{MemRead, MemWrite},
     serialization::Savable,
     NesResult,

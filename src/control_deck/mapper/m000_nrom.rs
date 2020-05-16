@@ -2,10 +2,10 @@
 //!
 //! [http://wiki.nesdev.com/w/index.php/NROM]()
 
+use super::{Mapper, MapperType, Mirroring};
 use crate::{
     cartridge::Cartridge,
     common::{Clocked, Powered},
-    mapper::{Mapper, MapperType, Mirroring},
     memory::{BankedMemory, MemRead, MemWrite},
     serialization::Savable,
     NesResult,

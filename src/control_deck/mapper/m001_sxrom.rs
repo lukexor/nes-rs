@@ -3,10 +3,10 @@
 //! [http://wiki.nesdev.com/w/index.php/SxROM]()
 //! [http://wiki.nesdev.com/w/index.php/MMC1]()
 
+use super::{Mapper, MapperType, Mirroring};
 use crate::{
     cartridge::Cartridge,
     common::{Clocked, Powered},
-    mapper::{Mapper, MapperType, Mirroring},
     memory::{BankedMemory, MemRead, MemWrite},
     serialization::Savable,
     NesResult,

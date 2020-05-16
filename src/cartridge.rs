@@ -1,6 +1,6 @@
 //! Handles reading NES Cartridge headers and ROMs
 
-use crate::{map_nes_err, mapper::Mirroring, memory::Memory, nes_err, NesResult};
+use crate::{control_deck::mapper::Mirroring, map_nes_err, memory::Memory, nes_err, NesResult};
 use log::info;
 use std::{fmt, io::Read};
 

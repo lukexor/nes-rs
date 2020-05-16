@@ -1,6 +1,6 @@
 use crate::{
     common::{Clocked, Powered},
-    mapper::MapperType,
+    control_deck::mapper::MapperType,
     memory::MemRead,
     serialization::Savable,
     NesResult,

@@ -1,5 +1,5 @@
 target
 **/*.rs.bk
-roms/*
+roms
 node_modules
 dist

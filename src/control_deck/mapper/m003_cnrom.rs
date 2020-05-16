@@ -3,10 +3,10 @@
 //! [https://wiki.nesdev.com/w/index.php/CNROM]()
 //! [https://wiki.nesdev.com/w/index.php/INES_Mapper_003]()
 
+use super::{Mapper, MapperType, Mirroring};
 use crate::{
     cartridge::Cartridge,
     common::{Clocked, Powered},
-    mapper::{Mapper, MapperType, Mirroring},
     memory::{BankedMemory, MemRead, MemWrite},
     serialization::Savable,
 };

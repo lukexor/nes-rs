@@ -1,12 +1,14 @@
 use crate::{
-    apu::Apu,
     common::{Addr, Byte, Powered},
+    control_deck::{
+        apu::Apu,
+        mapper::{self, Mapper, MapperType},
+        ppu::Ppu,
+    },
     hashmap,
     input::Input,
-    mapper::{self, Mapper, MapperType},
     memory::{MemRead, MemWrite, Memory},
     nes_err,
-    ppu::Ppu,
     serialization::Savable,
     NesResult,
 };
