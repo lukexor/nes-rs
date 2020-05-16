@@ -1,12 +1,12 @@
 use super::{ViewType, Viewable};
 use crate::{
     control_deck::{RENDER_HEIGHT, RENDER_WIDTH},
-    nes::{action::Action, filesystem, keybinding::Keybind, state::NesState},
+    nes::{action::Action, event, filesystem, keybinding::Keybind, state::NesState},
     NesResult,
 };
 use pix_engine::{
     draw::Rect,
-    event::{Key, PixEvent},
+    event::PixEvent,
     image::{Image, ImageRef},
     pixel::{self, ColorType, Pixel},
     StateData,
@@ -17,7 +17,7 @@ const TEXTURE_NAME: &str = "open_rom";
 const WIDTH: u32 = 3 * RENDER_WIDTH;
 const HEIGHT: u32 = 3 * RENDER_HEIGHT;
 const MAX_ROWS: usize = 19;
-const MAX_RECENTS: usize = 2;
+const MAX_RECENTS: usize = 4;
 
 #[derive(PartialEq, Eq)]
 enum OpenMode {
@@ -26,10 +26,7 @@ enum OpenMode {
 }
 
 pub struct OpenRomView {
-    x: u32,
-    y: u32,
-    width: u32,
-    height: u32,
+    scale: u32,
     active: bool,
     selected: usize,
     scroll: usize,
@@ -37,16 +34,12 @@ pub struct OpenRomView {
     recent_roms: Vec<(PathBuf, PathBuf)>,
     mode: OpenMode,
     image: ImageRef,
-    keybindings: Vec<Keybind>,
 }
 
 impl OpenRomView {
-    pub fn new(width: u32, height: u32) -> Self {
+    pub fn new(scale: u32) -> Self {
         Self {
-            x: 0,
-            y: 0,
-            width,
-            height,
+            scale,
             active: false,
             selected: 0,
             scroll: 0,
@@ -54,38 +47,41 @@ impl OpenRomView {
             recent_roms: Vec::new(),
             mode: OpenMode::Recent,
             image: Image::new_ref(WIDTH, HEIGHT),
-            keybindings: Vec::new(),
         }
     }
 
-    fn load_keybindings(&mut self) {
-        let pressed = true;
-        let repeat = true;
-        let default_bindings = [
-            (Key::Escape, pressed, !repeat, None, Action::CloseView),
-            (
-                Key::O,
-                pressed,
-                !repeat,
-                Some(&[PixEvent::KeyPress(Key::Ctrl, true, false)][..]),
-                Action::CloseView,
-            ),
-            (Key::Up, pressed, !repeat, None, Action::SelectUp),
-            (Key::Up, pressed, repeat, None, Action::SelectUp),
-            (Key::Down, pressed, !repeat, None, Action::SelectDown),
-            (Key::Down, pressed, repeat, None, Action::SelectDown),
-            (Key::Return, pressed, !repeat, None, Action::SelectPath),
-            (Key::Right, pressed, !repeat, None, Action::SelectRight),
-            (Key::Left, pressed, !repeat, None, Action::SelectLeft),
-        ];
-        for (key, pressed, repeat, modifiers, action) in &default_bindings {
-            let keybind = Keybind::new(
-                PixEvent::KeyPress(*key, *pressed, *repeat),
-                *modifiers,
-                action.clone(),
-            );
-            self.keybindings.push(keybind);
+    #[rustfmt::skip]
+    pub fn default_keybindings() -> Vec<Keybind> {
+        use Action::*;
+        use pix_engine::event::{
+            Key::{self, *},
+            PixEvent::*,
+        };
+        use ViewType::*;
+
+        let mut binds: Vec<Keybind> = Vec::new();
+        let press = true;
+        let rpt = true;
+        let no_mods = &[][..];
+        let ctrl = &[KeyPress(Ctrl, press, !rpt)][..];
+
+        // Keyboard
+
+        binds.push(Keybind::new(KeyPress(Escape, press, !rpt), OpenRom, no_mods, CloseView));
+        binds.push(Keybind::new(KeyPress(O, press, !rpt), OpenRom, ctrl, CloseView));
+        binds.push(Keybind::new(KeyPress(Key::Tab, press, !rpt), OpenRom, no_mods, Action::Tab));
+        binds.push(Keybind::new(KeyPress(Return, press, !rpt), OpenRom, no_mods, SelectPath));
+        for repeat in [true, false].iter() {
+            binds.push(Keybind::new(KeyPress(Up, press, *repeat), OpenRom, no_mods, SelectUp));
+            binds.push(Keybind::new(KeyPress(Down, press, *repeat), OpenRom, no_mods, SelectDown));
+            binds.push(Keybind::new(KeyPress(Left, press, *repeat), OpenRom, no_mods, SelectLeft));
+            binds.push(Keybind::new(KeyPress(Right, press, *repeat), OpenRom, no_mods, SelectRight));
         }
+
+        // Controller
+        // TODO
+
+        binds
     }
 
     fn load_paths(&mut self, state: &mut NesState) -> NesResult<()> {
@@ -147,7 +143,7 @@ impl OpenRomView {
         data.set_draw_scale(2);
         match self.mode {
             OpenMode::NewFile => {
-                let max = std::cmp::min(self.paths.len(), self.scroll + MAX_ROWS);
+                let max = std::cmp::min(self.paths.len(), self.scroll + MAX_ROWS + 1);
                 for (i, rom) in self.paths[self.scroll..max].iter().enumerate() {
                     let color = if i == self.selected - self.scroll {
                         pixel::BLUE
@@ -164,7 +160,8 @@ impl OpenRomView {
                 }
             }
             OpenMode::Recent => {
-                let max = std::cmp::min(self.recent_roms.len(), self.scroll + MAX_RECENTS);
+                let max = std::cmp::min(self.recent_roms.len(), self.scroll + MAX_RECENTS + 2);
+                let orig_x = x;
                 for (i, (rom, image)) in self.recent_roms[self.scroll..max].iter().enumerate() {
                     let color = if i == self.selected - self.scroll {
                         pixel::BLUE
@@ -175,12 +172,17 @@ impl OpenRomView {
                     rom.set_extension("");
                     if let Some(image) = image.to_str() {
                         let image = Image::from_file(image)?;
+                        data.set_draw_scale(1);
                         data.draw_image(x, y, &image);
-                        y += image.height() * 2 + 10;
-                    }
-                    if let Some(path) = rom.file_name().and_then(|file| file.to_str()) {
-                        data.draw_string(x, y, &path.to_string(), color);
-                        y += 40;
+                        if let Some(path) = rom.file_name().and_then(|file| file.to_str()) {
+                            data.draw_string(x, y + image.height() + 10, &path.to_string(), color);
+                        }
+                        if i % 2 == 1 {
+                            x = orig_x;
+                            y += image.height() + 30;
+                        } else {
+                            x += image.width() + 50;
+                        }
                     }
                 }
             }
@@ -217,9 +219,8 @@ impl Viewable for OpenRomView {
             TEXTURE_NAME,
             ColorType::Rgba,
             Rect::new(0, 0, WIDTH, HEIGHT),
-            Rect::new(self.x, self.y, self.width, self.height),
+            Rect::new(0, 0, self.scale * RENDER_WIDTH, self.scale * RENDER_HEIGHT),
         )?;
-        self.load_keybindings();
         self.load_paths(state)?;
         self.render_view(data)?;
         Ok(true)
@@ -259,82 +260,75 @@ impl Viewable for OpenRomView {
         event: &PixEvent,
         state: &mut NesState,
         data: &mut StateData,
-    ) -> NesResult<bool> {
-        let keybind = self
-            .keybindings
-            .iter()
-            .find(|&keybind| keybind.event == *event);
-        if let Some(keybind) = keybind {
-            let mut all_pressed = true;
-            for modifier in &keybind.modifiers {
-                all_pressed &= state.is_event_pressed(modifier);
-            }
-
-            if all_pressed {
-                match keybind.action {
-                    Action::SelectUp => {
-                        if self.selected > 0 {
-                            self.selected -= 1;
-                            if self.scroll > 0 && self.selected < self.scroll + 1 {
-                                self.scroll -= 1;
-                            }
+    ) -> bool {
+        if let Some(keybind) = event::match_keybinding(event, self.view_type(), state) {
+            match keybind.action {
+                Action::SelectUp => {
+                    if self.selected > 0 {
+                        self.selected -= 1;
+                        if self.scroll > 0 && self.selected < self.scroll + 1 {
+                            self.scroll -= 1;
                         }
                     }
-                    Action::SelectDown => {
-                        let (scroll_max, total) = match self.mode {
-                            OpenMode::NewFile => (MAX_ROWS - 1, self.paths.len() - 1),
-                            OpenMode::Recent => (MAX_RECENTS - 1, self.recent_roms.len() - 1),
-                        };
-                        if self.selected < total {
-                            self.selected += 1;
-                            // Should scroll when there is one item left in view
-                            let should_scroll = self.selected - self.scroll >= scroll_max;
-                            if should_scroll {
-                                self.scroll += 1;
-                            }
-                        }
-                    }
-                    Action::SelectLeft => {
-                        self.selected = 0;
-                        self.scroll = 0;
-                        self.mode = OpenMode::NewFile;
-                    }
-                    Action::SelectRight => {
-                        self.selected = 0;
-                        self.scroll = 0;
-                        self.mode = OpenMode::Recent;
-                    }
-                    Action::SelectPath => {
-                        let path = match self.mode {
-                            OpenMode::NewFile => &self.paths[self.selected],
-                            OpenMode::Recent => {
-                                let (rom, _) = &self.recent_roms[self.selected];
-                                rom
-                            }
-                        };
-                        if path.is_dir() {
-                            if path == &PathBuf::from("../") {
-                                let current_path = &state.prefs.current_path;
-                                if let Some(path) = current_path.parent() {
-                                    state.prefs.current_path = path.to_path_buf();
-                                }
-                            } else {
-                                state.prefs.current_path = path.clone();
-                            }
-                            self.load_paths(state)?;
-                            self.selected = 0;
-                            self.scroll = 0;
-                        } else if path.extension() == Some(OsStr::new("nes")) {
-                            state.queue_action(Action::LoadRom(path.clone()));
-                        }
-                    }
-                    _ => state.queue_action(keybind.action.clone()),
                 }
+                Action::SelectDown => {
+                    let (scroll_max, total) = match self.mode {
+                        OpenMode::NewFile => (MAX_ROWS - 1, self.paths.len() - 1),
+                        OpenMode::Recent => (MAX_RECENTS - 2, self.recent_roms.len() - 2),
+                    };
+                    if self.selected < total {
+                        self.selected += 1;
+                        // Should scroll when there is one item left in view
+                        let should_scroll = self.selected - self.scroll >= scroll_max;
+                        if should_scroll {
+                            self.scroll += 1;
+                        }
+                    }
+                }
+                Action::SelectLeft => {
+                    self.selected = 0;
+                    self.scroll = 0;
+                    self.mode = OpenMode::NewFile;
+                }
+                Action::SelectRight => {
+                    self.selected = 0;
+                    self.scroll = 0;
+                    self.mode = OpenMode::Recent;
+                }
+                Action::SelectPath => {
+                    let path = match self.mode {
+                        OpenMode::NewFile => &self.paths[self.selected],
+                        OpenMode::Recent => {
+                            let (rom, _) = &self.recent_roms[self.selected];
+                            rom
+                        }
+                    };
+                    if path.is_dir() {
+                        if path == &PathBuf::from("../") {
+                            let current_path = &state.prefs.current_path;
+                            if let Some(path) = current_path.parent() {
+                                state.prefs.current_path = path.to_path_buf();
+                            }
+                        } else {
+                            state.prefs.current_path = path.clone();
+                        }
+                        if let Err(e) = self.load_paths(state) {
+                            eprintln!("Error reading directory: {}", e);
+                        }
+                        self.selected = 0;
+                        self.scroll = 0;
+                    } else if path.extension() == Some(OsStr::new("nes")) {
+                        state.queue_action(Action::LoadRom(path.clone()));
+                    }
+                }
+                _ => state.queue_action(keybind.action),
             }
-            self.render_view(data)?;
-            Ok(true)
+            if let Err(e) = self.render_view(data) {
+                eprintln!("Error rendering view: {}", e);
+            }
+            true
         } else {
-            Ok(false)
+            false
         }
     }
 

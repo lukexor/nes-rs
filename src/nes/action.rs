@@ -13,15 +13,14 @@ pub enum Action {
     // Player inputs (1-4)
     PA(u8), PB(u8), PATurbo(u8), PBTurbo(u8), PSelect(u8), PStart(u8),
     PUp(u8), PDown(u8), PLeft(u8), PRight(u8),
-    // TogglePause, ToggleFastForward, IncSpeed, DecSpeed, Rewind, ToggleFullscreen,
-    // ToggleSound, ToggleNtscVideo, ToggleVsync, ToggleRecording, Screenshot,
-    // Save slot (1-4)
-    SelectUp, SelectDown, SelectLeft, SelectRight, SelectPath, LoadRom(PathBuf),
+    FastForward, IncSpeed, DecSpeed, Rewind, ToggleFullscreen,
+    ToggleSound, ToggleNtscVideo, ToggleVsync, ToggleRecording, Screenshot,
+    Tab, SelectUp, SelectDown, SelectLeft, SelectRight, SelectPath, LoadRom(PathBuf),
     CloseView, OpenView(ViewType),
-    // SetSaveSlot(u8), SaveState, LoadState, Quit, Reset, PowerCycle,
-    // IncLogLevel, DecLogLevel, DebugScanlineUp, DebugScanlineDown,
-    // DebugStepInto, DebugStepOver, DebugStepOut, DebugStepScanline,
-    // DebugStepFrame,
+    SetSaveSlot(u8), SaveState, LoadState, Quit, Reset, PowerCycle,
+    IncLogLevel, DecLogLevel, DebugScanlineUp, DebugScanlineDown,
+    DebugStepInto, DebugStepOver, DebugStepOut, DebugStepScanline,
+    DebugStepFrame,
 }
 
 impl Nes {
@@ -30,10 +29,9 @@ impl Nes {
             view.on_pause(&mut self.state, data)?;
         }
         let mut view: View = match view_type {
-            ViewType::Emulation => {
-                EmulationView::new(self.width, self.height, &self.state.prefs).into()
-            }
-            ViewType::OpenRom => OpenRomView::new(self.width, self.height).into(),
+            ViewType::Emulation => EmulationView::new(&self.state.prefs).into(),
+            ViewType::OpenRom => OpenRomView::new(self.state.prefs.scale).into(),
+            _ => unimplemented!("View not implemented yet"),
         };
         view.on_start(&mut self.state, data)?;
         view.on_resume(&mut self.state, data)?;

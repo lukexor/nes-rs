@@ -20,7 +20,9 @@ pub enum View {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ViewType {
+    Menu,
     Emulation,
+    Help,
     OpenRom,
 }
 
@@ -51,8 +53,8 @@ pub trait Viewable {
         _event: &PixEvent,
         _state: &mut NesState,
         _data: &mut StateData,
-    ) -> NesResult<bool> {
-        Ok(false)
+    ) -> bool {
+        false
     }
     fn is_active(&self) -> bool {
         false

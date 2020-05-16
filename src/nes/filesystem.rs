@@ -1,4 +1,4 @@
-use crate::{map_nes_err, nes_err, serialization::Savable, NesResult};
+use crate::{map_nes_err, nes::keybinding::Keybind, nes_err, serialization::Savable, NesResult};
 use pix_engine::image::Image;
 use std::{
     collections::HashSet,
@@ -10,6 +10,7 @@ use std::{
 
 const CONFIG_DIR: &str = ".rustynes";
 const RECENTS: &str = "recents";
+const KEYBINDS: &str = "keybindings.yaml";
 
 /// Searches for valid NES rom files ending in `.nes` at the given path
 pub fn find_roms<P: AsRef<Path>>(path: &P) -> NesResult<Vec<PathBuf>> {
@@ -51,6 +52,7 @@ pub fn get_recent_roms() -> NesResult<Vec<(PathBuf, PathBuf)>> {
         let image_path = recents_dir.join(rom_file).with_extension("png");
         results.push((rom_path, image_path));
     }
+    // TODO sort by timestamp descending
     Ok(results)
 }
 
@@ -84,6 +86,7 @@ pub fn add_recent_rom<P: AsRef<Path>>(rom: &P, image: Image) -> NesResult<()> {
         recents.load(&mut recents_file)?;
     }
 
+    // TODO add timestamp - handle symlinks
     // Save out recent games list
     recents.insert(rom.as_ref().to_string_lossy().to_string());
     let recents_file = File::create(&recents_path).map_err(|e| {
@@ -109,6 +112,14 @@ pub fn list_dirs<P: AsRef<Path>>(path: &P) -> NesResult<Vec<PathBuf>> {
         .filter(|path| path.is_dir())
         .for_each(|s| paths.push(s));
     Ok(paths)
+}
+
+pub fn load_keybindings() -> Option<Vec<Keybind>> {
+    // let mut keybindings = Vec::new();
+
+    // keybindings
+    // TODO Check file, if exists, load
+    None
 }
 
 fn config_dir() -> PathBuf {

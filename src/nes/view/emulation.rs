@@ -5,18 +5,13 @@ use crate::{
     input::InputButton,
     map_nes_err,
     nes::{
-        action::Action, filesystem, keybinding::Keybind, preferences::Preferences, state::NesState,
+        action::Action, event, filesystem, keybinding::Keybind, preferences::Preferences,
+        state::NesState,
     },
     NesResult,
 };
 use chrono::prelude::{DateTime, Local};
-use pix_engine::{
-    draw::Rect,
-    event::{Key, PixEvent},
-    image::Image,
-    pixel::ColorType,
-    StateData,
-};
+use pix_engine::{draw::Rect, event::PixEvent, image::Image, pixel::ColorType, StateData};
 use std::{
     fs::File,
     io::{BufReader, BufWriter},
@@ -26,32 +21,78 @@ use std::{
 const TEXTURE_NAME: &str = "emulation";
 
 pub struct EmulationView {
-    // TODO these could be moved to a common struct
-    x: u32,
-    y: u32,
-    width: u32,
-    height: u32,
+    scale: u32,
     deck: ControlDeck,
     loaded_title: String,
     running_time: f32,
     paused: bool,
-    keybindings: Vec<Keybind>,
 }
 
 impl EmulationView {
-    pub fn new(width: u32, height: u32, prefs: &Preferences) -> Self {
+    pub fn new(prefs: &Preferences) -> Self {
+        let scale = prefs.scale;
         let config = Config::from_prefs(prefs);
         Self {
-            x: 0,
-            y: 0,
-            width,
-            height,
+            scale,
             deck: ControlDeck::with_config(config),
             loaded_title: String::new(),
             running_time: 0.0,
             paused: false,
-            keybindings: Vec::new(),
         }
+    }
+
+    #[rustfmt::skip]
+    pub fn default_keybindings() -> Vec<Keybind> {
+        use Action::*;
+        use pix_engine::event::{
+            Key::*,
+            PixEvent::*,
+        };
+        use ViewType::*;
+
+        let mut binds: Vec<Keybind> = Vec::new();
+        let press = true;
+        let rpt = true;
+        let no_mods = &[][..];
+        let ctrl = &[KeyPress(Ctrl, press, !rpt)][..];
+
+        // Player 1 Keyboard
+        for pressed in [true, false].iter() {
+            binds.push(Keybind::new(KeyPress(Z, *pressed, !rpt), Emulation, no_mods, PA(1)));
+            binds.push(Keybind::new(KeyPress(X, *pressed, !rpt), Emulation, no_mods, PB(1)));
+            binds.push(Keybind::new(KeyPress(A, *pressed, !rpt), Emulation, no_mods, PATurbo(1)));
+            binds.push(Keybind::new(KeyPress(S, *pressed, !rpt), Emulation, no_mods, PBTurbo(1)));
+            binds.push(Keybind::new(KeyPress(RShift, *pressed, !rpt), Emulation, no_mods, PSelect(1)));
+            binds.push(Keybind::new(KeyPress(Return, *pressed, !rpt), Emulation, no_mods, PStart(1)));
+            binds.push(Keybind::new(KeyPress(Up, *pressed, !rpt), Emulation, no_mods, PUp(1)));
+            binds.push(Keybind::new(KeyPress(Down, *pressed, !rpt), Emulation, no_mods, PDown(1)));
+            binds.push(Keybind::new(KeyPress(Left, *pressed, !rpt), Emulation, no_mods, PLeft(1)));
+            binds.push(Keybind::new(KeyPress(Right, *pressed, !rpt), Emulation, no_mods, PRight(1)));
+        }
+
+        // Player 1-4 Controller
+        // TODO
+
+        // Menu Keyboard
+        binds.push(Keybind::new(KeyPress(Escape, press, !rpt), Emulation, no_mods, OpenView(Menu)));
+        binds.push(Keybind::new(KeyPress(F1, press, !rpt), Emulation, no_mods, OpenView(Help)));
+        binds.push(Keybind::new(KeyPress(O, press, !rpt), Emulation, ctrl, OpenView(OpenRom)));
+        binds.push(Keybind::new(KeyPress(Q, press, !rpt), Emulation, ctrl, Action::Quit));
+        binds.push(Keybind::new(KeyPress(R, press, !rpt), Emulation, ctrl, Reset));
+        binds.push(Keybind::new(KeyPress(P, press, !rpt), Emulation, ctrl, PowerCycle));
+        binds.push(Keybind::new(KeyPress(Equals, press, !rpt), Emulation, ctrl, IncSpeed));
+        binds.push(Keybind::new(KeyPress(Minus, press, !rpt), Emulation, ctrl, DecSpeed));
+        binds.push(Keybind::new(KeyPress(Space, press, !rpt), Emulation, no_mods, FastForward));
+        binds.push(Keybind::new(KeyPress(Space, !press, !rpt), Emulation, no_mods, FastForward));
+        binds.push(Keybind::new(KeyPress(Num1, press, !rpt), Emulation, no_mods, SetSaveSlot(1)));
+        binds.push(Keybind::new(KeyPress(Num2, press, !rpt), Emulation, no_mods, SetSaveSlot(2)));
+        binds.push(Keybind::new(KeyPress(Num3, press, !rpt), Emulation, no_mods, SetSaveSlot(3)));
+        binds.push(Keybind::new(KeyPress(Num4, press, !rpt), Emulation, no_mods, SetSaveSlot(4)));
+
+        // Menu Controller
+        // TODO
+
+        binds
     }
 
     fn load_rom<P: AsRef<Path>>(&mut self, path: &P) -> NesResult<()> {
@@ -134,46 +175,6 @@ impl EmulationView {
         Ok(())
     }
 
-    fn load_keybindings(&mut self) {
-        let pressed = true;
-        let repeat = false;
-        // TODO move this out to a file
-        let default_bindings = [
-            (Key::Z, pressed, repeat, None, Action::PA(1)),
-            (Key::X, pressed, repeat, None, Action::PB(1)),
-            (Key::RShift, pressed, repeat, None, Action::PSelect(1)),
-            (Key::Return, pressed, repeat, None, Action::PStart(1)),
-            (Key::Up, pressed, repeat, None, Action::PUp(1)),
-            (Key::Down, pressed, repeat, None, Action::PDown(1)),
-            (Key::Left, pressed, repeat, None, Action::PLeft(1)),
-            (Key::Right, pressed, repeat, None, Action::PRight(1)),
-            (Key::Z, !pressed, repeat, None, Action::PA(1)),
-            (Key::X, !pressed, repeat, None, Action::PB(1)),
-            (Key::RShift, !pressed, repeat, None, Action::PSelect(1)),
-            (Key::Return, !pressed, repeat, None, Action::PStart(1)),
-            (Key::Up, !pressed, repeat, None, Action::PUp(1)),
-            (Key::Down, !pressed, repeat, None, Action::PDown(1)),
-            (Key::Left, !pressed, repeat, None, Action::PLeft(1)),
-            (Key::Right, !pressed, repeat, None, Action::PRight(1)),
-            (
-                Key::O,
-                pressed,
-                repeat,
-                Some(&[PixEvent::KeyPress(Key::Ctrl, true, false)][..]),
-                Action::OpenView(ViewType::OpenRom),
-            ),
-        ];
-
-        for (key, pressed, repeat, modifiers, action) in &default_bindings {
-            let keybind = Keybind::new(
-                PixEvent::KeyPress(*key, *pressed, *repeat),
-                *modifiers,
-                action.clone(),
-            );
-            self.keybindings.push(keybind);
-        }
-    }
-
     fn configure_deck(&mut self, prefs: &Preferences) {
         let config = Config::from_prefs(&prefs);
         self.deck.set_config(config);
@@ -196,6 +197,27 @@ impl EmulationView {
         filesystem::add_recent_rom(path, image)?;
         Ok(())
     }
+
+    fn handle_gamepad_input(&mut self, keybind: &Keybind) -> bool {
+        let button = match keybind.action {
+            Action::PA(player) => Some(InputButton::PA(player)),
+            Action::PB(player) => Some(InputButton::PB(player)),
+            Action::PSelect(player) => Some(InputButton::PSelect(player)),
+            Action::PStart(player) => Some(InputButton::PStart(player)),
+            Action::PUp(player) => Some(InputButton::PUp(player)),
+            Action::PDown(player) => Some(InputButton::PDown(player)),
+            Action::PLeft(player) => Some(InputButton::PLeft(player)),
+            Action::PRight(player) => Some(InputButton::PRight(player)),
+            _ => None, // No input for this action
+        };
+        if let Some(button) = button {
+            if let PixEvent::KeyPress(_key, pressed, _repeat) = keybind.event {
+                self.deck.input_button(button, pressed);
+                return true;
+            }
+        }
+        false
+    }
 }
 
 impl Viewable for EmulationView {
@@ -203,11 +225,10 @@ impl Viewable for EmulationView {
         data.create_texture(
             TEXTURE_NAME,
             ColorType::Rgba,
-            Rect::new(0, 0, RENDER_WIDTH, RENDER_HEIGHT), // Trims overscan
-            Rect::new(self.x, self.y, self.width, self.height),
+            Rect::new(0, 0, RENDER_WIDTH, RENDER_HEIGHT),
+            Rect::new(0, 0, self.scale * RENDER_WIDTH, self.scale * RENDER_HEIGHT),
         )?;
 
-        self.load_keybindings();
         self.configure_deck(&state.prefs);
         if let Some(rom) = &state.loaded_rom {
             self.load_rom(rom)?;
@@ -255,43 +276,14 @@ impl Viewable for EmulationView {
         event: &PixEvent,
         state: &mut NesState,
         _data: &mut StateData,
-    ) -> NesResult<bool> {
-        let keybind = self
-            .keybindings
-            .iter()
-            .find(|&keybind| keybind.event == *event);
-        if let Some(keybind) = keybind {
-            for _ in 0..4 {
-                let button = match keybind.action {
-                    Action::PA(player) => Some(InputButton::PA(player)),
-                    Action::PB(player) => Some(InputButton::PB(player)),
-                    Action::PSelect(player) => Some(InputButton::PSelect(player)),
-                    Action::PStart(player) => Some(InputButton::PStart(player)),
-                    Action::PUp(player) => Some(InputButton::PUp(player)),
-                    Action::PDown(player) => Some(InputButton::PDown(player)),
-                    Action::PLeft(player) => Some(InputButton::PLeft(player)),
-                    Action::PRight(player) => Some(InputButton::PRight(player)),
-                    _ => None, // No  input for this action
-                };
-                if let Some(button) = button {
-                    if let PixEvent::KeyPress(_key, pressed, _repeat) = keybind.event {
-                        self.deck.input_button(button, pressed);
-                        return Ok(true);
-                    }
-                }
+    ) -> bool {
+        if let Some(keybind) = event::match_keybinding(event, self.view_type(), state) {
+            if !self.handle_gamepad_input(&keybind) {
+                state.queue_action(keybind.action);
             }
-
-            let mut all_pressed = true;
-            for modifier in &keybind.modifiers {
-                all_pressed &= state.is_event_pressed(modifier);
-            }
-
-            if all_pressed {
-                state.queue_action(keybind.action.clone());
-            }
-            Ok(true)
+            true
         } else {
-            Ok(false)
+            false
         }
     }
 

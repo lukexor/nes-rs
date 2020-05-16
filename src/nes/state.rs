@@ -1,6 +1,7 @@
 use super::{
     action::Action,
-    filesystem,
+    event, filesystem,
+    keybinding::Keybind,
     preferences::Preferences,
     view::{ViewType, Viewable},
     Nes,
@@ -15,6 +16,7 @@ use std::{
 pub struct NesState {
     pub prefs: Preferences,
     pub loaded_rom: Option<PathBuf>,
+    pub keybindings: Vec<Keybind>,
     action_queue: VecDeque<Action>,
     held_keys: HashSet<String>,
     held_buttons: HashSet<String>,
@@ -31,9 +33,11 @@ impl NesState {
                 .to_path_buf();
         }
         let loaded_rom = if roms.len() == 1 { roms.pop() } else { None };
+        let keybindings = filesystem::load_keybindings().unwrap_or_else(event::default_keybindings);
         Ok(Self {
             prefs,
             loaded_rom,
+            keybindings,
             action_queue: VecDeque::new(),
             held_keys: HashSet::new(),
             held_buttons: HashSet::new(),

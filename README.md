@@ -163,17 +163,16 @@ ARGS:
 | B                     | X           | B                |
 | A (Turbo)             | A           | X                |
 | B (Turbo)             | S           | Y                |
-| Start                 | Enter       | Start            |
 | Select                | Right Shift | Back             |
+| Start                 | Return      | Start            |
 | Up, Down, Left, Right | Arrow Keys  | Left Stick/D-Pad |
 
 There are also some emulator actions:
 
 | Action                            | Keyboard         | Controller         |
 | --------------------------------- | ---------------- | ------------------ |
-| Pause                             | Escape           | Guide Button       |
-| Help Menu<sup>\*</sup>            | F1               |                    |
-| Configuration Menu<sup>\*</sup>   | Ctrl-C           |                    |
+| Pause/Menu                        | Escape           | Guide Button       |
+| Help Menu                         | F1               |                    |
 | Open ROM<sup>\*</sup>             | Ctrl-O           |                    |
 | Quit                              | Ctrl-Q           |                    |
 | Reset                             | Ctrl-R           |                    |

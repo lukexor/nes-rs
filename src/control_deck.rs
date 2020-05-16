@@ -154,21 +154,18 @@ impl ControlDeck {
     }
 
     pub fn input_button(&mut self, button: InputButton, pressed: bool) {
-        for player in 1u8..=4 {
-            let mut input = &mut self.cpu.bus.input.gamepads[player as usize - 1];
-            match button {
-                InputButton::PA(p) if p == player => input.a = pressed,
-                InputButton::PB(p) if p == player => input.b = pressed,
-                InputButton::PATurbo(p) if p == player => input.a_turbo = pressed,
-                InputButton::PBTurbo(p) if p == player => input.b_turbo = pressed,
-                InputButton::PSelect(p) if p == player => input.select = pressed,
-                InputButton::PStart(p) if p == player => input.start = pressed,
-                InputButton::PUp(p) if p == player => input.up = pressed,
-                InputButton::PDown(p) if p == player => input.down = pressed,
-                InputButton::PLeft(p) if p == player => input.left = pressed,
-                InputButton::PRight(p) if p == player => input.right = pressed,
-                _ => (),
-            }
+        let mut input = &mut self.cpu.bus.input.gamepads;
+        match button {
+            InputButton::PA(p) => input[p as usize - 1].a = pressed,
+            InputButton::PB(p) => input[p as usize - 1].b = pressed,
+            InputButton::PATurbo(p) => input[p as usize - 1].a_turbo = pressed,
+            InputButton::PBTurbo(p) => input[p as usize - 1].b_turbo = pressed,
+            InputButton::PSelect(p) => input[p as usize - 1].select = pressed,
+            InputButton::PStart(p) => input[p as usize - 1].start = pressed,
+            InputButton::PUp(p) => input[p as usize - 1].up = pressed,
+            InputButton::PDown(p) => input[p as usize - 1].down = pressed,
+            InputButton::PLeft(p) => input[p as usize - 1].left = pressed,
+            InputButton::PRight(p) => input[p as usize - 1].right = pressed,
         }
     }
 }

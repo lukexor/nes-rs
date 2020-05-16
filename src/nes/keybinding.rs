@@ -1,20 +1,26 @@
-use super::action::Action;
+use super::{action::Action, view::ViewType};
 use pix_engine::event::PixEvent;
 
 /// A mapping of a user event to a UI action
 #[derive(Debug, Clone)]
 pub struct Keybind {
     pub event: PixEvent,
+    pub view_type: ViewType,
     pub modifiers: Vec<PixEvent>,
     pub action: Action,
 }
 
 impl Keybind {
-    pub fn new(event: PixEvent, modifiers: Option<&[PixEvent]>, action: Action) -> Self {
-        let modifiers = modifiers.unwrap_or(&[][..]).to_vec();
+    pub fn new(
+        event: PixEvent,
+        view_type: ViewType,
+        modifiers: &[PixEvent],
+        action: Action,
+    ) -> Self {
         Self {
             event,
-            modifiers,
+            view_type,
+            modifiers: modifiers.to_vec(),
             action,
         }
     }
