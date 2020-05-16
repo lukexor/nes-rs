@@ -1,10 +1,12 @@
 use super::{ViewType, Viewable};
 use crate::{
     common::Powered,
-    control_deck::{ControlDeck, RENDER_HEIGHT, RENDER_WIDTH},
+    control_deck::{Config, ControlDeck, RENDER_HEIGHT, RENDER_WIDTH},
     input::InputButton,
     map_nes_err,
-    nes::{action::Action, filesystem, keybinding::Keybind, state::NesState},
+    nes::{
+        action::Action, filesystem, keybinding::Keybind, preferences::Preferences, state::NesState,
+    },
     NesResult,
 };
 use pix_engine::{
@@ -34,13 +36,14 @@ pub struct EmulationView {
 }
 
 impl EmulationView {
-    pub fn new(width: u32, height: u32) -> Self {
+    pub fn new(width: u32, height: u32, prefs: &Preferences) -> Self {
+        let config = Config::from_prefs(prefs);
         Self {
             x: 0,
             y: 0,
             width,
             height,
-            deck: ControlDeck::new(),
+            deck: ControlDeck::with_config(config),
             running_time: 0.0,
             paused: false,
             keybindings: Vec::new(),
@@ -167,11 +170,17 @@ impl EmulationView {
             self.keybindings.push(keybind);
         }
     }
+
+    fn configure_deck(&mut self, prefs: &Preferences) {
+        let config = Config::from_prefs(&prefs);
+        self.deck.set_config(config);
+    }
 }
 
 impl Viewable for EmulationView {
     fn on_start(&mut self, state: &mut NesState, data: &mut StateData) -> NesResult<bool> {
         self.load_keybindings();
+        self.configure_deck(&state.prefs);
         data.create_texture(
             TEXTURE_NAME,
             ColorType::Rgba,

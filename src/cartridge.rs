@@ -33,6 +33,7 @@ pub struct Cartridge {
     pub header: INesHeader,
     pub prg_rom: Memory, // Program ROM
     pub chr_rom: Memory, // Character ROM
+    pub randomize_ram: bool,
 }
 
 impl Cartridge {
@@ -43,6 +44,7 @@ impl Cartridge {
             header: INesHeader::new(),
             prg_rom: Memory::new(),
             chr_rom: Memory::new(),
+            randomize_ram: false,
         }
     }
 
@@ -56,7 +58,7 @@ impl Cartridge {
     ///
     /// If the file is not a valid '.nes' file, or there are insufficient permissions to read the
     /// file, then an error is returned.
-    pub fn from_rom<F: Read>(name: &str, mut rom: &mut F) -> NesResult<Self> {
+    pub fn from_rom<F: Read>(name: &str, mut rom: &mut F, randomize_ram: bool) -> NesResult<Self> {
         let header = INesHeader::load(&mut rom)
             .map_err(|e| map_nes_err!("invalid rom \"{}\": {}", name, e))?;
 
@@ -101,6 +103,7 @@ impl Cartridge {
             header,
             prg_rom,
             chr_rom,
+            randomize_ram,
         };
         info!(
             "Loaded `{}` - Mapper: {} - {}, PRG ROM: {}, CHR ROM: {}, Mirroring: {:?}, Battery: {}",
@@ -308,7 +311,8 @@ mod tests {
         for data in rom_data {
             let rom = File::open(&data.0).expect("valid file");
             let mut rom = BufReader::new(rom);
-            let c = Cartridge::from_rom(&data.0, &mut rom);
+            let randomize = false;
+            let c = Cartridge::from_rom(&data.0, &mut rom, randomize);
             assert!(c.is_ok(), "new cartridge {}", data.0);
             let c = c.unwrap();
             assert_eq!(

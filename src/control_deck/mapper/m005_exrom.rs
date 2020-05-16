@@ -192,8 +192,8 @@ impl Exrom {
             ppu_idle: 0x00,
             ppu_in_vblank: false,
             ppu_rendering: false,
-            prg_ram: BankedMemory::ram(PRG_RAM_SIZE, PRG_WINDOW),
-            exram: BankedMemory::ram(EXRAM_SIZE, EXRAM_WINDOW),
+            prg_ram: BankedMemory::ram(PRG_RAM_SIZE, PRG_WINDOW, cart.randomize_ram),
+            exram: BankedMemory::ram(EXRAM_SIZE, EXRAM_WINDOW, cart.randomize_ram),
             prg_rom: BankedMemory::from(cart.prg_rom, PRG_WINDOW),
             chr_rom: BankedMemory::from(cart.chr_rom, CHR_ROM_WINDOW),
             tile_cache: 0x0000,
@@ -1077,11 +1077,11 @@ impl Into<u8> for Mirroring {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::{cartridge::Cartridge, memory::Memory};
+
     #[test]
-    #[cfg(feature = "no-randomize-ram")]
     fn prg_ram_protect() {
-        use super::*;
-        use crate::{cartridge::Cartridge, memory::Memory};
         for a in 0..4 {
             for b in 0..4 {
                 let mut cart = Cartridge::new();

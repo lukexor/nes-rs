@@ -48,7 +48,7 @@ impl Pxrom {
             mirroring: cart.mirroring(),
             chr_rom_banks: [0x00; 4],
             latch: [0x00; 2],
-            prg_ram: BankedMemory::ram(PRG_RAM_SIZE, PRG_WINDOW),
+            prg_ram: BankedMemory::ram(PRG_RAM_SIZE, PRG_WINDOW, cart.randomize_ram),
             prg_rom: BankedMemory::from(cart.prg_rom, PRG_WINDOW),
             chr_rom: BankedMemory::from(cart.chr_rom, CHR_ROM_WINDOW),
             open_bus: 0x00,

@@ -13,7 +13,7 @@ pub type Byte = u8;
 pub const CONFIG_DIR: &str = ".tetanes";
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum NesFormat {
+pub enum NesStandard {
     Ntsc,
     Pal,
     Dendy,
@@ -57,7 +57,8 @@ macro_rules! hashmap {
         }
     );
 }
-impl Savable for NesFormat {
+
+impl Savable for NesStandard {
     fn save<F: Write>(&self, fh: &mut F) -> NesResult<()> {
         (*self as u8).save(fh)
     }
@@ -65,10 +66,10 @@ impl Savable for NesFormat {
         let mut val = 0u8;
         val.load(fh)?;
         *self = match val {
-            0 => NesFormat::Ntsc,
-            1 => NesFormat::Pal,
-            2 => NesFormat::Dendy,
-            _ => panic!("invalid NesFormat value"),
+            0 => NesStandard::Ntsc,
+            1 => NesStandard::Pal,
+            2 => NesStandard::Dendy,
+            _ => panic!("invalid NesStandard value"),
         };
         Ok(())
     }

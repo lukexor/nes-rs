@@ -4,7 +4,7 @@
 
 use super::mapper::{Mapper, MapperType};
 use crate::{
-    common::{Addr, Byte, Clocked, NesFormat, Powered},
+    common::{Addr, Byte, Clocked, NesStandard, Powered},
     memory::{MemRead, MemWrite},
     serialization::Savable,
     NesResult,
@@ -75,7 +75,7 @@ pub struct Ppu {
     frame: Frame,           // Frame data keeps track of data and shift registers between frames
     pub frame_complete: bool,
     pub ntsc_video: bool,
-    nes_format: NesFormat,
+    nes_standard: NesStandard,
     clock_remainder: u8,
     debug: bool,
     nt_scanline: u16,
@@ -102,7 +102,7 @@ impl Ppu {
             frame: Frame::new(),
             frame_complete: false,
             ntsc_video: true,
-            nes_format: NesFormat::Ntsc, // TODO NesFormat should be a passed in option
+            nes_standard: NesStandard::Ntsc, // TODO NesStandard should be a passed in option
             clock_remainder: 0,
             debug: false,
             nt_scanline: 0,
@@ -483,7 +483,7 @@ impl Ppu {
             palette &= !0x0F; // Remove chroma
         }
         if self.ntsc_video {
-            let format = self.nes_format;
+            let format = self.nes_standard;
             let pixel = ((self.regs.emphasis(format) as u32) << 6) | palette as u32;
             self.frame
                 .put_ntsc_pixel(x.into(), self.scanline.into(), pixel, self.frame_cycles);
@@ -879,9 +879,9 @@ impl Ppu {
 impl Clocked for Ppu {
     // http://wiki.nesdev.com/w/index.php/PPU_rendering
     fn clock(&mut self) -> usize {
-        let clocks = match self.nes_format {
-            NesFormat::Ntsc | NesFormat::Dendy => 3,
-            NesFormat::Pal => {
+        let clocks = match self.nes_standard {
+            NesStandard::Ntsc | NesStandard::Dendy => 3,
+            NesStandard::Pal => {
                 if self.clock_remainder == 5 {
                     self.clock_remainder = 0;
                     4
@@ -1029,7 +1029,7 @@ impl Savable for Ppu {
         self.frame.save(fh)?;
         self.frame_complete.save(fh)?;
         self.ntsc_video.save(fh)?;
-        self.nes_format.save(fh)?;
+        self.nes_standard.save(fh)?;
         self.clock_remainder.save(fh)?;
         // Ignore
         // debug
@@ -1055,7 +1055,7 @@ impl Savable for Ppu {
         self.frame.load(fh)?;
         self.frame_complete.load(fh)?;
         self.ntsc_video.load(fh)?;
-        self.nes_format.load(fh)?;
+        self.nes_standard.load(fh)?;
         self.clock_remainder.load(fh)?;
         Ok(())
     }
@@ -1076,7 +1076,7 @@ impl fmt::Debug for Ppu {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mapper;
+    use crate::control_deck::mapper;
 
     #[test]
     fn ppu_scrolling_registers() {

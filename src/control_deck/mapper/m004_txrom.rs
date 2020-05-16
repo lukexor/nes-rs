@@ -109,14 +109,15 @@ impl Txrom {
                 Some(BankedMemory::ram(
                     FOUR_SCREEN_RAM_SIZE,
                     FOUR_SCREEN_RAM_SIZE,
+                    cart.randomize_ram,
                 ))
             } else {
                 None
             },
-            prg_ram: BankedMemory::ram(PRG_RAM_SIZE, PRG_WINDOW),
+            prg_ram: BankedMemory::ram(PRG_RAM_SIZE, PRG_WINDOW, cart.randomize_ram),
             prg_rom: BankedMemory::from(cart.prg_rom, PRG_WINDOW),
             chr: if has_chr_ram {
-                BankedMemory::ram(chr_ram_size, CHR_WINDOW)
+                BankedMemory::ram(chr_ram_size, CHR_WINDOW, cart.randomize_ram)
             } else {
                 BankedMemory::from(cart.chr_rom, CHR_WINDOW)
             },

@@ -55,13 +55,13 @@ lazy_static! {
 }
 
 impl Bus {
-    pub fn new() -> Self {
+    pub fn new(randomize_ram: bool) -> Self {
         let mut bus = Self {
             ppu: Ppu::new(),
             apu: Apu::new(),
             input: Input::new(),
             mapper: Box::new(mapper::null()),
-            wram: Memory::ram(WRAM_SIZE),
+            wram: Memory::ram(WRAM_SIZE, randomize_ram),
             genie_codes: HashMap::new(),
             open_bus: 0,
         };
@@ -256,7 +256,7 @@ impl Savable for Bus {
 
 impl Default for Bus {
     fn default() -> Self {
-        Self::new()
+        Self::new(true)
     }
 }
 
@@ -268,18 +268,18 @@ impl fmt::Debug for Bus {
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    #[cfg(feature = "no-randomize-ram")]
-    fn test_bus() {
-        use super::*;
-        use crate::mapper;
-        use std::{fs::File, io::BufReader};
+    use super::*;
+    use crate::control_deck::mapper;
+    use std::{fs::File, io::BufReader};
 
+    #[test]
+    fn test_bus() {
         let rom_file = "tests/cpu/nestest.nes";
         let rom = File::open(rom_file).expect("valid file");
         let mut rom = BufReader::new(rom);
-        let mapper = mapper::load_rom(&rom_file, &mut rom).expect("loaded mapper");
-        let mut mem = Bus::new();
+        let randomize = false;
+        let mapper = mapper::load_rom(&rom_file, &mut rom, randomize).expect("loaded mapper");
+        let mut mem = Bus::new(randomize);
         mem.load_mapper(mapper);
         mem.write(0x0005, 0x0015);
         mem.write(0x0015, 0x0050);

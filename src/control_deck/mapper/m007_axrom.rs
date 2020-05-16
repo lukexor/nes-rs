@@ -34,7 +34,7 @@ impl Axrom {
             mirroring: cart.mirroring(),
             prg_rom: BankedMemory::from(cart.prg_rom, PRG_ROM_WINDOW),
             chr: if has_chr_ram {
-                BankedMemory::ram(CHR_RAM_SIZE, CHR_WINDOW)
+                BankedMemory::ram(CHR_RAM_SIZE, CHR_WINDOW, cart.randomize_ram)
             } else {
                 BankedMemory::from(cart.chr_rom, CHR_WINDOW)
             },

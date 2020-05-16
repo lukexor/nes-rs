@@ -70,10 +70,10 @@ impl Sxrom {
             },
             has_chr_ram,
             battery_backed: cart.battery_backed(),
-            prg_ram: BankedMemory::ram(prg_ram_size, PRG_RAM_WINDOW),
+            prg_ram: BankedMemory::ram(prg_ram_size, PRG_RAM_WINDOW, cart.randomize_ram),
             prg_rom: BankedMemory::from(cart.prg_rom, PRG_ROM_WINDOW),
             chr: if has_chr_ram {
-                BankedMemory::ram(CHR_RAM_SIZE, CHR_WINDOW)
+                BankedMemory::ram(CHR_RAM_SIZE, CHR_WINDOW, cart.randomize_ram)
             } else {
                 BankedMemory::from(cart.chr_rom, CHR_WINDOW)
             },

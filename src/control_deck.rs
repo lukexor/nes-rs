@@ -1,7 +1,9 @@
 use crate::{
-    common::{Clocked, Powered},
+    common::{Clocked, NesStandard, Powered},
     input::InputButton,
-    map_nes_err, nes_err,
+    map_nes_err,
+    nes::preferences::Preferences,
+    nes_err,
     serialization::{validate_save_header, write_save_header, Savable},
     NesResult,
 };
@@ -20,26 +22,77 @@ mod ppu;
 pub use mapper::MapperType;
 pub use ppu::{RENDER_HEIGHT, RENDER_WIDTH};
 
+pub const ALL_AUDIO_CHANNELS: u16 = AudioChannel::Pulse1 as u16
+    | AudioChannel::Pulse2 as u16
+    | AudioChannel::Triangle as u16
+    | AudioChannel::Noise as u16
+    | AudioChannel::Dmc as u16;
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum NesFormat {
-    Ntsc,
-    Pal,
-    Dendy,
+pub enum VideoFilter {
+    Standard,
+    Pixellate,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum EmulationSpeed {
+    S10,
+    S50,
+    S100,
+    S150,
+    S200,
+    S300,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum AudioChannel {
+    Pulse1 = 1,
+    Pulse2 = (1 << 1),
+    Triangle = (1 << 2),
+    Noise = (1 << 3),
+    Dmc = (1 << 4),
+}
+
+pub struct Config {
+    emulation_speed: EmulationSpeed,
+    randomize_start_ram: bool,
+    unlimited_sprites: bool,
+    concurrent_dpad: bool,
+    cheats: Vec<String>,
+    nes_standard: NesStandard,
+    video_filter: VideoFilter,
+    wide_nes: bool,
+    audio_channels: u16, // Bitflag of AudioChannel
 }
 
 pub struct ControlDeck {
     cpu: Cpu,
+    config: Config,
 }
 
 impl ControlDeck {
     pub fn new() -> Self {
+        let config = Config::default();
         Self {
-            cpu: Cpu::new(Bus::new()),
+            cpu: Cpu::new(Bus::new(config.randomize_start_ram)),
+            config,
         }
     }
 
+    pub fn with_config(config: Config) -> Self {
+        Self {
+            cpu: Cpu::new(Bus::new(config.randomize_start_ram)),
+            config,
+        }
+    }
+
+    pub fn set_config(&mut self, config: Config) {
+        self.config = config;
+        // TODO self.cpu.bus.apu.set_speed(self.config.emulation_speed);
+    }
+
     pub fn load_rom<F: Read>(&mut self, name: &str, rom: &mut F) -> NesResult<()> {
-        let mapper = mapper::load_rom(name, rom)?;
+        let mapper = mapper::load_rom(name, rom, self.config.randomize_start_ram)?;
         // TODO Refactor this
         self.cpu.bus.load_mapper(mapper);
         Ok(())
@@ -120,6 +173,35 @@ impl ControlDeck {
     }
 }
 
+impl Config {
+    pub fn new() -> Self {
+        Self {
+            emulation_speed: EmulationSpeed::S100,
+            randomize_start_ram: false,
+            unlimited_sprites: false,
+            concurrent_dpad: false,
+            cheats: Vec::new(),
+            nes_standard: NesStandard::Ntsc,
+            video_filter: VideoFilter::Standard,
+            wide_nes: false,
+            audio_channels: ALL_AUDIO_CHANNELS,
+        }
+    }
+    pub fn from_prefs(prefs: &Preferences) -> Self {
+        Self {
+            emulation_speed: prefs.emulation_speed,
+            randomize_start_ram: prefs.randomize_start_ram,
+            unlimited_sprites: prefs.unlimited_sprites,
+            concurrent_dpad: prefs.concurrent_dpad,
+            cheats: prefs.cheats.clone(),
+            nes_standard: prefs.nes_standard,
+            video_filter: prefs.video_filter,
+            wide_nes: prefs.wide_nes,
+            audio_channels: prefs.audio_channels,
+        }
+    }
+}
+
 impl Clocked for ControlDeck {
     fn clock(&mut self) -> usize {
         self.cpu.clock()
@@ -149,6 +231,12 @@ impl Savable for ControlDeck {
 }
 
 impl Default for ControlDeck {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Default for Config {
     fn default() -> Self {
         Self::new()
     }

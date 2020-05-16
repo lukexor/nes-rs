@@ -26,7 +26,9 @@ impl Nes {
             view.on_pause(&mut self.state, data)?;
         }
         let mut view: View = match view_type {
-            ViewType::Emulation => EmulationView::new(self.width, self.height).into(),
+            ViewType::Emulation => {
+                EmulationView::new(self.width, self.height, &self.state.prefs).into()
+            }
             ViewType::OpenRom => OpenRomView::new(self.width, self.height).into(),
         };
         view.on_start(&mut self.state, data)?;

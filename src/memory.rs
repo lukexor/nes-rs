@@ -35,11 +35,11 @@ pub struct Memory {
 
 impl Memory {
     pub fn new() -> Self {
-        Self::with_capacity(0)
+        let randomize = false;
+        Self::with_capacity(0, randomize)
     }
 
-    pub fn with_capacity(capacity: usize) -> Self {
-        let randomize = cfg!(not(feature = "no-randomize-ram"));
+    pub fn with_capacity(capacity: usize, randomize: bool) -> Self {
         let data = if randomize {
             let mut rng = rand::thread_rng();
             let mut data = Vec::with_capacity(capacity);
@@ -57,13 +57,15 @@ impl Memory {
     }
 
     pub fn from_bytes(bytes: &[Byte]) -> Self {
-        let mut memory = Self::with_capacity(bytes.len());
+        let randomize = false;
+        let mut memory = Self::with_capacity(bytes.len(), randomize);
         memory.data = bytes.to_vec();
         memory
     }
 
     pub fn rom(capacity: usize) -> Self {
-        let mut rom = Self::with_capacity(capacity);
+        let randomize = false;
+        let mut rom = Self::with_capacity(capacity, randomize);
         rom.writable = false;
         rom
     }
@@ -73,11 +75,11 @@ impl Memory {
         rom
     }
 
-    pub fn ram(capacity: usize) -> Self {
-        Self::with_capacity(capacity)
+    pub fn ram(capacity: usize, randomize: bool) -> Self {
+        Self::with_capacity(capacity, randomize)
     }
-    pub fn ram_from_bytes(bytes: &[Byte]) -> Self {
-        let mut ram = Self::ram(bytes.len());
+    pub fn ram_from_bytes(bytes: &[Byte], randomize: bool) -> Self {
+        let mut ram = Self::ram(bytes.len(), randomize);
         ram.data = bytes.to_vec();
         ram
     }
@@ -208,11 +210,12 @@ pub struct BankedMemory {
 
 impl BankedMemory {
     pub fn new(window: usize) -> Self {
-        Self::ram(0x2000, window)
+        let randomize = false;
+        Self::ram(0x2000, window, randomize)
     }
 
-    pub fn ram(capacity: usize, window: usize) -> Self {
-        let memory = Memory::ram(capacity);
+    pub fn ram(capacity: usize, window: usize, randomize: bool) -> Self {
+        let memory = Memory::ram(capacity, randomize);
         Self {
             banks: Vec::new(),
             window,
@@ -440,7 +443,8 @@ mod tests {
 
     #[test]
     fn add_bank_range_test() {
-        let mut memory = BankedMemory::ram(0xFFFF, 0x2000);
+        let randomize = false;
+        let mut memory = BankedMemory::ram(0xFFFF, 0x2000, randomize);
         memory.add_bank_range(0x6000, 0xFFFF);
         assert_eq!(memory.get_bank(0x6000), 0);
         assert_eq!(memory.get_bank(0x7FFF), 0);
@@ -453,7 +457,7 @@ mod tests {
         assert_eq!(memory.get_bank(0xE000), 4);
         assert_eq!(memory.get_bank(0xFFFF), 4);
 
-        let mut memory = BankedMemory::ram(0xFFFF, 0x2000);
+        let mut memory = BankedMemory::ram(0xFFFF, 0x2000, randomize);
         memory.add_bank_range(0x8000, 0xBFFF);
         assert_eq!(memory.get_bank(0x8000), 0);
         assert_eq!(memory.get_bank(0x9FFF), 0);
@@ -464,7 +468,7 @@ mod tests {
         assert_eq!(memory.get_bank(0x6000), 0);
         assert_eq!(memory.get_bank(0x8000), 1);
 
-        let mut memory = BankedMemory::ram(0xFFFF, 0x0400);
+        let mut memory = BankedMemory::ram(0xFFFF, 0x0400, randomize);
         memory.add_bank_range(0x0000, 0x1FFF);
         assert_eq!(memory.get_bank(0x0000), 0);
         assert_eq!(memory.get_bank(0x03FF), 0);
@@ -476,7 +480,8 @@ mod tests {
 
     #[test]
     fn add_bank_test() {
-        let mut memory = BankedMemory::ram(0xFFFF, 0x4000);
+        let randomize = false;
+        let mut memory = BankedMemory::ram(0xFFFF, 0x4000, randomize);
         memory.add_bank(0x8000, 0xBFFF);
         memory.add_bank(0xC000, 0xFFFF);
         assert_eq!(memory.get_bank(0x8000), 0);
@@ -491,8 +496,9 @@ mod tests {
 
     #[test]
     fn peek_bank_test() {
+        let randomize = false;
         let size = 40 * 1024;
-        let rom = Memory::ram(size);
+        let rom = Memory::ram(size, randomize);
         let mut memory = BankedMemory::from(rom, 0x2000);
 
         assert!(!memory.is_empty(), "memory non-empty");
@@ -520,8 +526,9 @@ mod tests {
 
     #[test]
     fn write_bank_test() {
+        let randomize = false;
         let size = 40 * 1024;
-        let rom = Memory::ram(size);
+        let rom = Memory::ram(size, randomize);
         let mut memory = BankedMemory::from(rom, 0x2000);
 
         assert!(!memory.is_empty(), "memory non-empty");
@@ -545,8 +552,9 @@ mod tests {
 
     #[test]
     fn set_bank_test() {
+        let randomize = false;
         let size = 128 * 1024;
-        let rom = Memory::ram(size);
+        let rom = Memory::ram(size, randomize);
         let mut memory = BankedMemory::from(rom, 0x2000);
 
         assert!(!memory.is_empty(), "memory non-empty");
@@ -575,10 +583,9 @@ mod tests {
 
     #[test]
     fn bank_mirroring_test() {
-        pretty_env_logger::init_timed();
-
+        let randomize = false;
         let size = 128 * 1024;
-        let rom = Memory::ram(size);
+        let rom = Memory::ram(size, randomize);
         let mut memory = BankedMemory::from(rom, 0x4000);
 
         assert!(!memory.is_empty(), "memory non-empty");

@@ -92,8 +92,8 @@ pub trait Mapper: MemRead + MemWrite + Savable + Clocked + Powered {
 }
 
 /// Attempts to return a valid Mapper for the given rom.
-pub fn load_rom<F: Read>(name: &str, rom: &mut F) -> NesResult<MapperType> {
-    let cart = Cartridge::from_rom(name, rom)?;
+pub fn load_rom<F: Read>(name: &str, rom: &mut F, randomize_ram: bool) -> NesResult<MapperType> {
+    let cart = Cartridge::from_rom(name, rom, randomize_ram)?;
     let mapper = match cart.header.mapper_num {
         0 => Nrom::load(cart),
         1 => Sxrom::load(cart),
