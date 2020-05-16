@@ -102,10 +102,9 @@ impl EmulationView {
         let mut rom = BufReader::new(rom);
         if let Some(path) = path.file_name().and_then(|s| s.to_str()) {
             self.loaded_title = path.to_string();
-            println!("Loading {:?}", self.loaded_title);
         }
         self.deck
-            .load_rom(&path.to_string_lossy(), &mut rom)
+            .load_rom(&self.loaded_title, &mut rom)
             .map_err(|e| map_nes_err!("failed to load rom {:?}: {}", path, e))?;
         self.load_sram(&path)?;
         self.deck.power_on();

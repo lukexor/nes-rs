@@ -12,7 +12,7 @@
 //! ARGS:
 //!     <path>    The NES ROM to load or a directory containing `.nes` ROM files. [default: current directory]
 
-use std::path::PathBuf;
+use std::{env, path::PathBuf};
 use structopt::StructOpt;
 use tetanes::{
     nes::{preferences::Preferences, Nes},
@@ -20,6 +20,11 @@ use tetanes::{
 };
 
 fn main() -> NesResult<()> {
+    if env::var("RUST_LOG").is_err() {
+        env::set_var("RUST_LOG", "info");
+    }
+    pretty_env_logger::init();
+
     let opt = Opt::from_args();
     let prefs = Preferences::new(opt.path)?;
     let nes = Nes::with_prefs(prefs)?;
