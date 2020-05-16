@@ -1,6 +1,6 @@
 use crate::{nes::state::NesState, NesResult};
 use enum_dispatch::enum_dispatch;
-use pix_engine::StateData;
+use pix_engine::{event::PixEvent, StateData};
 use views::*;
 
 mod emulation;
@@ -45,8 +45,14 @@ pub trait Viewable {
         // TODO
         Ok(true)
     }
-    fn handle_event(&mut self, _state: &mut NesState, _data: &mut StateData) -> NesResult<bool> {
+    fn handle_event(
+        &mut self,
+        _event: &PixEvent,
+        _state: &mut NesState,
+        _data: &mut StateData,
+    ) -> NesResult<bool> {
         // TODO
         Ok(false)
     }
 }
+

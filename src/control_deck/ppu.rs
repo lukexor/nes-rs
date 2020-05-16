@@ -2,9 +2,9 @@
 //!
 //! [http://wiki.nesdev.com/w/index.php/PPU]()
 
+use super::mapper::{Mapper, MapperType};
 use crate::{
     common::{Addr, Byte, Clocked, NesFormat, Powered},
-    control_deck::mapper::{Mapper, MapperType},
     memory::{MemRead, MemWrite},
     serialization::Savable,
     NesResult,

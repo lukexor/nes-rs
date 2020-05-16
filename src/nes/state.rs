@@ -3,7 +3,6 @@ use crate::common::Powered;
 use pix_engine::{PixEngineResult, State, StateData};
 
 pub struct NesState {
-    // TODO
     pub preferences: Preferences,
 }
 

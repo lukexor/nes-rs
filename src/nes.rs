@@ -8,6 +8,8 @@ use state::NesState;
 use view::{views::*, View};
 
 mod event;
+mod filesystem;
+mod keybinding;
 mod preferences;
 mod state;
 mod view;
@@ -26,6 +28,7 @@ pub struct Nes {
     width: u32,
     height: u32,
     should_close: bool,
+    has_focus: bool,
     state: NesState,
     views: Vec<View>,
 }
@@ -39,6 +42,7 @@ impl Nes {
             width,
             height,
             should_close: false,
+            has_focus: false,
             state: NesState::new(),
             views: vec![EmulationView::new(width, height).into()],
         }

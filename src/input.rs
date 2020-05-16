@@ -4,10 +4,7 @@ use crate::{
     common::Powered,
     memory::{MemRead, MemWrite},
 };
-use std::{cell::RefCell, fmt, rc::Rc};
-
-/// Alias for Input wrapped in a Rc/RefCell
-pub type InputRef = Rc<RefCell<Input>>;
+use std::fmt;
 
 // The "strobe state": the order in which the NES reads the buttons.
 const STROBE_A: u8 = 0;
@@ -18,6 +15,13 @@ const STROBE_UP: u8 = 4;
 const STROBE_DOWN: u8 = 5;
 const STROBE_LEFT: u8 = 6;
 const STROBE_RIGHT: u8 = 7;
+
+#[rustfmt::skip]
+#[derive(Debug, PartialEq, Eq)]
+pub enum InputButton {
+    P1A, P1B, P1Select, P1Start, P1Up, P1Down, P1Left, P1Right,
+    P2A, P2B, P2Select, P2Start, P2Up, P2Down, P2Left, P2Right,
+}
 
 /// Represents an NES Joypad
 #[derive(Default, Debug, Clone)]

@@ -1,4 +1,4 @@
-//! Utils and Traits shared among modules
+//! Macros and Traits shared among modules
 
 use crate::{control_deck::MapperType, nes_err, serialization::Savable, NesResult};
 use enum_dispatch::enum_dispatch;
@@ -57,7 +57,6 @@ macro_rules! hashmap {
         }
     );
 }
-
 impl Savable for NesFormat {
     fn save<F: Write>(&self, fh: &mut F) -> NesResult<()> {
         (*self as u8).save(fh)

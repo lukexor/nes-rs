@@ -1,5 +1,4 @@
-use super::NesFormat;
-use crate::{serialization::Savable, NesResult};
+use crate::{common::NesFormat, serialization::Savable, NesResult};
 use std::io::{Read, Write};
 
 // PPUSCROLL masks
