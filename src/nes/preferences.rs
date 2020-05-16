@@ -1,6 +1,7 @@
 use crate::{
     common::NesStandard,
     control_deck::{EmulationSpeed, VideoFilter, ALL_AUDIO_CHANNELS},
+    NesResult,
 };
 use std::{env, path::PathBuf};
 
@@ -68,8 +69,8 @@ pub enum TrimBorder {
 }
 
 impl Preferences {
-    pub fn new(path: Option<PathBuf>) -> Self {
-        Self {
+    pub fn new(path: Option<PathBuf>) -> NesResult<Self> {
+        Ok(Self {
             // General
             pause_in_bg: true,
             emulation_speed: EmulationSpeed::S100, // 100%
@@ -83,7 +84,8 @@ impl Preferences {
 
             // Gameplay
             current_path: path
-                .unwrap_or_else(|| env::current_dir().unwrap_or_else(|_| PathBuf::from("./"))),
+                .unwrap_or_else(|| env::current_dir().unwrap_or_else(|_| PathBuf::from("./")))
+                .canonicalize()?,
             recent_games: Vec::new(),
             action_recording: false,
             action_playback: false,
@@ -112,12 +114,6 @@ impl Preferences {
             // Debug
             debug_cpu: false,
             debug_ppu: false,
-        }
-    }
-}
-
-impl Default for Preferences {
-    fn default() -> Self {
-        Self::new(None)
+        })
     }
 }

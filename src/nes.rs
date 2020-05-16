@@ -38,10 +38,6 @@ pub struct Nes {
 }
 
 impl Nes {
-    pub fn new() -> NesResult<Self> {
-        Self::with_prefs(Preferences::default())
-    }
-
     pub fn with_prefs(prefs: Preferences) -> NesResult<Self> {
         let width = prefs.scale * DEFAULT_WIDTH;
         let height = prefs.scale * DEFAULT_HEIGHT;

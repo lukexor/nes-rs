@@ -4,10 +4,11 @@ use super::{
 };
 use crate::NesResult;
 use pix_engine::StateData;
+use std::path::PathBuf;
 
 /// UI Actions that can be performed and mapped to user events
 #[rustfmt::skip]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub enum Action {
     // Player inputs (1-4)
     PA(u8), PB(u8), PATurbo(u8), PBTurbo(u8), PSelect(u8), PStart(u8),
@@ -15,9 +16,10 @@ pub enum Action {
     TogglePause, ToggleFastForward, IncSpeed, DecSpeed, Rewind, ToggleFullscreen,
     ToggleSound, ToggleNtscVideo, ToggleVsync, ToggleRecording, Screenshot,
     // Save slot (1-4)
-    SetSaveSlot(u8), SaveState, LoadState, Quit, Reset, PowerCycle,
+    SetSaveSlot(u8), SaveState, LoadState, SelectPath, LoadRom(PathBuf), Quit, Reset, PowerCycle,
     CloseView, OpenView(ViewType), IncLogLevel, DecLogLevel, DebugScanlineUp, DebugScanlineDown,
-    DebugStepInto, DebugStepOver, DebugStepOut, DebugStepScanline, DebugStepFrame,
+    SelectUp, SelectDown, DebugStepInto, DebugStepOver, DebugStepOut, DebugStepScanline,
+    DebugStepFrame,
 }
 
 impl Nes {
@@ -38,12 +40,27 @@ impl Nes {
     }
 
     pub fn close_view(&mut self, data: &mut StateData) -> NesResult<()> {
-        if let Some(view) = &mut self.views.pop() {
+        if self.views.len() == 1 && self.views[0].view_type() != ViewType::OpenRom {
+            let _ = self.views.pop();
+            self.state.queue_action(Action::OpenView(ViewType::OpenRom));
+        } else {
+            if let Some(view) = &mut self.views.pop() {
+                view.on_stop(&mut self.state, data)?;
+            }
+            if let Some(view) = self.views.last_mut() {
+                view.on_resume(&mut self.state, data)?;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn load_rom(&mut self, rom: PathBuf, data: &mut StateData) -> NesResult<()> {
+        while let Some(view) = &mut self.views.pop() {
             view.on_stop(&mut self.state, data)?;
         }
-        if let Some(view) = self.views.last_mut() {
-            view.on_resume(&mut self.state, data)?;
-        }
+        self.state.loaded_rom = Some(rom);
+        self.state
+            .queue_action(Action::OpenView(ViewType::Emulation));
         Ok(())
     }
 }

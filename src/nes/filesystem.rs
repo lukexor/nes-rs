@@ -1,5 +1,6 @@
 use crate::{map_nes_err, nes_err, NesResult};
 use std::{
+    ffi::OsStr,
     io::BufWriter,
     path::{Path, PathBuf},
 };
@@ -52,7 +53,6 @@ pub fn create_png<P: AsRef<Path>>(
 /// If rom_path is a `.nes` file, uses that
 /// If no arg[1], searches current directory for `.nes` files
 pub fn find_roms<P: AsRef<Path>>(path: &P) -> NesResult<Vec<PathBuf>> {
-    use std::ffi::OsStr;
     let mut roms: Vec<PathBuf> = Vec::new();
     let path = path.as_ref();
     if path.is_dir() {
@@ -67,6 +67,18 @@ pub fn find_roms<P: AsRef<Path>>(path: &P) -> NesResult<Vec<PathBuf>> {
         nes_err!("invalid path: {:?}", path)?;
     }
     Ok(roms)
+}
+
+pub fn list_dirs<P: AsRef<Path>>(path: &P) -> NesResult<Vec<PathBuf>> {
+    let path = path.as_ref();
+    let mut paths: Vec<PathBuf> = Vec::new();
+    path.read_dir()
+        .map_err(|e| map_nes_err!("unable to read directory {:?}: {}", path, e))?
+        .filter_map(|result| result.ok())
+        .map(|direntry| direntry.path())
+        .filter(|path| path.is_dir())
+        .for_each(|s| paths.push(s));
+    Ok(paths)
 }
 
 /// Returns the path where battery-backed Save RAM files are stored

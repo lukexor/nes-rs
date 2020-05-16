@@ -161,11 +161,9 @@ impl EmulationView {
 
         for (key, pressed, repeat, modifiers, action) in &default_bindings {
             let keybind = Keybind::new(
-                PixEvent::KeyPress(*key, *pressed, false),
-                *pressed,
-                *repeat,
+                PixEvent::KeyPress(*key, *pressed, *repeat),
                 *modifiers,
-                *action,
+                action.clone(),
             );
             self.keybindings.push(keybind);
         }
@@ -179,8 +177,6 @@ impl EmulationView {
 
 impl Viewable for EmulationView {
     fn on_start(&mut self, state: &mut NesState, data: &mut StateData) -> NesResult<bool> {
-        self.load_keybindings();
-        self.configure_deck(&state.prefs);
         data.create_texture(
             TEXTURE_NAME,
             ColorType::Rgba,
@@ -188,8 +184,9 @@ impl Viewable for EmulationView {
             Rect::new(self.x, self.y, self.width, self.height),
         )?;
 
+        self.load_keybindings();
+        self.configure_deck(&state.prefs);
         if let Some(rom) = &state.loaded_rom {
-            println!("Loading {:?}", rom);
             self.load_rom(rom)?;
             self.deck.power_on();
         }
@@ -253,7 +250,10 @@ impl Viewable for EmulationView {
                     _ => None, // No  input for this action
                 };
                 if let Some(button) = button {
-                    self.deck.input_button(button, keybind.pressed);
+                    if let PixEvent::KeyPress(_key, pressed, _repeat) = keybind.event {
+                        self.deck.input_button(button, pressed);
+                        return Ok(true);
+                    }
                 }
             }
 
@@ -263,7 +263,7 @@ impl Viewable for EmulationView {
             }
 
             if all_pressed {
-                state.queue_action(keybind.action);
+                state.queue_action(keybind.action.clone());
             }
             Ok(true)
         } else {

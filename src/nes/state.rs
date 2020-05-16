@@ -21,8 +21,15 @@ pub struct NesState {
 }
 
 impl NesState {
-    pub fn with_prefs(prefs: Preferences) -> NesResult<Self> {
+    pub fn with_prefs(mut prefs: Preferences) -> NesResult<Self> {
         let mut roms = filesystem::find_roms(&prefs.current_path)?;
+        if prefs.current_path.is_file() {
+            prefs.current_path = prefs
+                .current_path
+                .parent()
+                .expect("file path should have a parent")
+                .to_path_buf();
+        }
         let loaded_rom = if roms.len() == 1 { roms.pop() } else { None };
         Ok(Self {
             prefs,
@@ -101,6 +108,7 @@ impl Nes {
             match action {
                 Action::OpenView(view_type) => self.open_view(view_type, data)?,
                 Action::CloseView => self.close_view(data)?,
+                Action::LoadRom(rom) => self.load_rom(rom, data)?,
                 _ => (),
             }
         }
@@ -109,7 +117,7 @@ impl Nes {
 }
 
 impl State for Nes {
-    fn on_start(&mut self, data: &mut StateData) -> PixEngineResult<bool> {
+    fn on_start(&mut self, _data: &mut StateData) -> PixEngineResult<bool> {
         self.power_on();
         // Initial view is emulation only if a given rom is passed in on the command line
         // Queuing this will call on_start
