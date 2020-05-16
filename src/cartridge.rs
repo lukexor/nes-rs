@@ -276,7 +276,7 @@ impl INesHeader {
 }
 
 impl fmt::Debug for Cartridge {
-    fn fmt(&self, f: &mut fmt::Formatter) -> std::result::Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::result::Result<(), fmt::Error> {
         write!(
             f,
             "Cartridge {{ header: {:?}, PRG-ROM: {}, CHR-ROM: {}",

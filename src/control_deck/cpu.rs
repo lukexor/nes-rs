@@ -786,10 +786,10 @@ impl Savable for Cpu {
 }
 
 impl fmt::Debug for Cpu {
-    fn fmt(&self, f: &mut fmt::Formatter) -> std::result::Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::result::Result<(), fmt::Error> {
         write!(
             f,
-            "Cpu {{ {:04X} A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} CYC:{} rel_addr:{} }}",
+            "Cpu {{ {:04X} A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} CYC:{} Step: {}, Stall: {}, Instr: {:?}, ABS: 0x{:04X}, REL: 0x{:04X}, DATA: 0x{:02X}, irq_pending: {}, nmi_pending: {}, last_irq: {}, last_nmi: {} }}",
             self.pc,
             self.acc,
             self.x,
@@ -797,7 +797,16 @@ impl fmt::Debug for Cpu {
             self.status,
             self.sp,
             self.cycle_count,
-            self.rel_addr
+            self.step,
+            self.stall,
+            self.instr,
+            self.abs_addr,
+            self.rel_addr,
+            self.fetched_data,
+            self.irq_pending,
+            self.nmi_pending,
+            self.last_irq,
+            self.last_nmi,
         )
     }
 }

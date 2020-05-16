@@ -190,7 +190,7 @@ impl Savable for Bank {
 }
 
 impl fmt::Debug for Bank {
-    fn fmt(&self, f: &mut fmt::Formatter) -> std::result::Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::result::Result<(), fmt::Error> {
         write!(
             f,
             "Bank {{ start: 0x{:04X}, end: 0x{:04X}, address: 0x{:04X} }}",
@@ -427,7 +427,7 @@ impl DerefMut for BankedMemory {
 }
 
 impl fmt::Debug for Memory {
-    fn fmt(&self, f: &mut fmt::Formatter) -> std::result::Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::result::Result<(), fmt::Error> {
         write!(
             f,
             "Memory {{ data: {} KB, writable: {} }}",

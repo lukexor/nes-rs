@@ -47,4 +47,10 @@ struct Opt {
         help = "The NES ROM to load or a directory containing `.nes` ROM files. [default: current directory]"
     )]
     path: Option<PathBuf>,
+    #[structopt(
+        long = "speed",
+        default_value = "1.0",
+        help = "Increase/Decrease emulation speed. (Ranges from 0.1 to 4.0)"
+    )]
+    speed: f32,
 }

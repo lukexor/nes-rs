@@ -1,5 +1,3 @@
-# Some tests rely on deterministic RAM state
-cargo build --release --features no-randomize-ram
 TESTS=(
 ## CPU ============================================================================================
 tests/cpu/branch_timing/1.Branch_Basics.nes
@@ -136,6 +134,7 @@ function ctrl_c() {
     exit
 }
 
+cargo build --release
 for test in ${TESTS[*]}; do
     target/release/tetanes --speed 4 $test
 done

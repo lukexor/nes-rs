@@ -11,7 +11,7 @@ use pix_engine::{
     pixel::{self, ColorType, Pixel},
     StateData,
 };
-use std::{ffi::OsStr, path::PathBuf};
+use std::{ffi::OsStr, fmt, path::PathBuf};
 
 const TEXTURE_NAME: &str = "open_rom";
 const WIDTH: u32 = 3 * RENDER_WIDTH;
@@ -19,7 +19,7 @@ const HEIGHT: u32 = 3 * RENDER_HEIGHT;
 const MAX_ROWS: usize = 19;
 const MAX_RECENTS: usize = 4;
 
-#[derive(PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 enum OpenMode {
     NewFile,
     Recent,
@@ -340,5 +340,15 @@ impl Viewable for OpenRomView {
 
     fn view_type(&self) -> ViewType {
         ViewType::OpenRom
+    }
+}
+
+impl fmt::Debug for OpenRomView {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::result::Result<(), fmt::Error> {
+        write!(
+            f,
+            "OpenRomView {{ scale: {}, active: {}, selected: {}, scroll: {}, paths: {}, recent_roms: {}, mode: {:?} }}",
+            self.scale, self.active, self.selected, self.scroll, self.paths.len(), self.recent_roms.len(), self.mode,
+        )
     }
 }

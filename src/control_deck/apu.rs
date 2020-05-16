@@ -53,8 +53,8 @@ pub struct Apu {
     pulse2: Pulse,
     triangle: Triangle,
     noise: Noise,
-    enabled: [bool; 5],
     pub dmc: Dmc,
+    enabled: [bool; 5],
     filters: [FilterType; 3],
     pulse_table: [f32; Self::PULSE_TABLE_SIZE],
     tnd_table: [f32; Self::TND_TABLE_SIZE],
@@ -441,8 +441,22 @@ impl Default for Apu {
 }
 
 impl fmt::Debug for Apu {
-    fn fmt(&self, f: &mut fmt::Formatter) -> std::result::Result<(), fmt::Error> {
-        write!(f, "APU {{ cyc: {} }}", self.cycle)
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::result::Result<(), fmt::Error> {
+        write!(f, "APU {{ irq_pending: {}, irq_enabled: {}, open_bus: 0x{:04X}, clock_rate: {}, cycle: {}, samples: {}, frame_sequencer: {:?}, pulse1: {:?}, pulse2: {:?}, triangle: {:?}, noise: {:?}, dmc: {:?}, enabled: {:?} }}",
+            self.irq_pending,
+            self.irq_enabled,
+            self.open_bus,
+            self.clock_rate,
+            self.cycle,
+            self.samples.len(),
+            self.frame_sequencer,
+            self.pulse1,
+            self.pulse2,
+            self.triangle,
+            self.noise,
+            self.dmc,
+            self.enabled,
+        )
     }
 }
 

@@ -13,6 +13,7 @@ pub mod views {
 
 #[allow(clippy::large_enum_variant)]
 #[enum_dispatch]
+#[derive(Debug)]
 pub enum View {
     EmulationView,
     OpenRomView,

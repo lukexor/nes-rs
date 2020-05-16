@@ -13,6 +13,7 @@ use std::{
     path::PathBuf,
 };
 
+#[derive(Debug)]
 pub struct NesState {
     pub prefs: Preferences,
     pub loaded_rom: Option<PathBuf>,

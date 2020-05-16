@@ -5,6 +5,7 @@ use crate::{
 };
 use std::{env, path::PathBuf};
 
+#[derive(Debug)]
 pub struct Preferences {
     // General
     pub pause_in_bg: bool,
@@ -49,6 +50,7 @@ pub struct Preferences {
     pub debug_ppu: bool,
 }
 
+#[derive(Debug)]
 pub enum SaveSlot {
     S1 = 1,
     S2 = 2,
@@ -56,6 +58,7 @@ pub enum SaveSlot {
     S4 = 4,
 }
 
+#[derive(Debug)]
 pub enum Scale {
     X1 = 1,
     X2 = 2,
@@ -63,6 +66,7 @@ pub enum Scale {
     X4 = 4,
 }
 
+#[derive(Debug)]
 pub enum TrimBorder {
     TopBot = 1,
     LeftRight = (1 << 1),

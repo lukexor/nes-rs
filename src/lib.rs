@@ -450,8 +450,7 @@
 //! [sdl2]: https://www.libsdl.org/
 //! [wasm]: https://webassembly.org/
 
-#![allow(dead_code)]
-// #![warn(missing_debug_implementations, rust_2018_idioms, missing_docs)]
+#![warn(missing_debug_implementations, rust_2018_idioms, missing_docs)]
 #![doc(
     html_favicon_url = "https://raw.githubusercontent.com/lukexor/tetanes/master/static/tetanes_icon.png"
 )]
@@ -459,7 +458,7 @@
     html_logo_url = "https://raw.githubusercontent.com/lukexor/tetanes/master/static/tetanes_icon.png"
 )]
 
-// MAJOR SEMVER Version
+// Major SEMVER Version
 pub const MAJOR_VERSION: u8 = 0;
 
 use pix_engine::PixEngineErr;
@@ -507,13 +506,13 @@ macro_rules! map_nes_err {
 }
 
 impl fmt::Display for NesErr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.description)
     }
 }
 
 impl fmt::Debug for NesErr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{{ err: {}, file: {}, line: {} }}",

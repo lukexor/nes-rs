@@ -20,6 +20,7 @@ use std::{
 
 const TEXTURE_NAME: &str = "emulation";
 
+#[derive(Debug)]
 pub struct EmulationView {
     scale: u32,
     deck: ControlDeck,

@@ -1,8 +1,3 @@
-# Some tests rely on deterministic RAM state
-cargo build --release --features no-randomize-ram
-
-# Count: 20
-
 TESTS=(
 ## CPU ============================================================================================
 tests/cpu/interrupts/4-irq_and_dma.nes # ??
@@ -39,6 +34,7 @@ function ctrl_c() {
     exit
 }
 
+cargo build --release
 for test in ${TESTS[*]}; do
     target/release/tetanes --speed 4 $test
 done

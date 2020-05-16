@@ -1068,8 +1068,23 @@ impl Default for Ppu {
 }
 
 impl fmt::Debug for Ppu {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Ppu {{ }}")
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Ppu {{ cycle: {}, cycle_count: {}, frame_cycles: {}, scanline: {}, scanline_phase: {}, nmi_pending: {}, regs: {:?}, frame_complete: {}, ntsc_video: {}, nes_standard: {:?}, clock_remainder: {}, debug: {}, nt_scanline: {}, pat_scanline: {} }}",
+            self.cycle,
+            self.cycle_count,
+            self.frame_cycles,
+            self.scanline,
+            self.scanline_phase,
+            self.nmi_pending,
+            self.regs,
+            self.frame_complete,
+            self.ntsc_video,
+            self.nes_standard,
+            self.clock_remainder,
+            self.debug,
+            self.nt_scanline,
+            self.pat_scanline,
+        )
     }
 }
 

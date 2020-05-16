@@ -4,7 +4,6 @@ use crate::{
     common::Powered,
     memory::{MemRead, MemWrite},
 };
-use std::fmt;
 
 // The "strobe state": the order in which the NES reads the buttons.
 const STROBE_A: u8 = 0;
@@ -85,7 +84,7 @@ impl Powered for Gamepad {
 }
 
 /// Input containing gamepad input state
-#[derive(Default, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct Input {
     pub gamepads: [Gamepad; 4],
     pub zapper: Zapper,
@@ -137,11 +136,5 @@ impl Powered for Input {
     fn reset(&mut self) {
         self.gamepads[0].reset();
         self.gamepads[1].reset();
-    }
-}
-
-impl fmt::Debug for Input {
-    fn fmt(&self, f: &mut fmt::Formatter) -> std::result::Result<(), fmt::Error> {
-        write!(f, "Input {{ }} ")
     }
 }

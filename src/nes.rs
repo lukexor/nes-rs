@@ -2,7 +2,7 @@ use crate::{
     control_deck::{RENDER_HEIGHT, RENDER_WIDTH},
     NesResult,
 };
-use include_dir::{include_dir, Dir};
+use include_dir::include_dir;
 use pix_engine::PixEngine;
 use preferences::Preferences;
 use state::NesState;
@@ -19,12 +19,12 @@ mod view;
 
 const APP_NAME: &str = "TetaNES";
 // This includes static assets as a binary during installation
-const _STATIC_DIR: Dir = include_dir!("./static");
 const ICON_PATH: &str = "static/tetanes_icon.png";
 const DEFAULT_WIDTH: u32 = RENDER_WIDTH;
 const DEFAULT_HEIGHT: u32 = RENDER_HEIGHT;
 const DEFAULT_VSYNC: bool = true;
 
+#[derive(Debug)]
 pub struct Nes {
     title: String,
     width: u32,
@@ -39,6 +39,8 @@ pub struct Nes {
 
 impl Nes {
     pub fn with_prefs(prefs: Preferences) -> NesResult<Self> {
+        let _ = include_dir!("./static");
+
         let width = prefs.scale * DEFAULT_WIDTH;
         let height = prefs.scale * DEFAULT_HEIGHT;
         Ok(Self {

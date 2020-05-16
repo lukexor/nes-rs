@@ -261,8 +261,15 @@ impl Default for Bus {
 }
 
 impl fmt::Debug for Bus {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Bus {{ }}")
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Bus {{ ppu: {:?}, apu: {:?}, mapper: {:?}, input: {:?}, wram: {}, open_bus: 0x{:04X} }}",
+            self.ppu,
+            self.apu,
+            self.mapper,
+            self.input,
+            self.wram.len(),
+            self.open_bus,
+        )
     }
 }
 

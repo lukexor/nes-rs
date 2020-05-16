@@ -53,6 +53,7 @@ pub enum AudioChannel {
     Dmc = (1 << 4),
 }
 
+#[derive(Debug)]
 pub struct Config {
     emulation_speed: EmulationSpeed,
     randomize_start_ram: bool,
@@ -65,6 +66,7 @@ pub struct Config {
     audio_channels: u16, // Bitflag of AudioChannel
 }
 
+#[derive(Debug)]
 pub struct ControlDeck {
     cpu: Cpu,
     config: Config,
