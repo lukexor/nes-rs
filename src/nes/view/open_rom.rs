@@ -273,8 +273,10 @@ impl Viewable for OpenRomView {
                 }
                 Action::SelectDown => {
                     let (scroll_max, total) = match self.mode {
-                        OpenMode::NewFile => (MAX_ROWS - 1, self.paths.len() - 1),
-                        OpenMode::Recent => (MAX_RECENTS - 2, self.recent_roms.len() - 2),
+                        OpenMode::NewFile => (MAX_ROWS - 1, self.paths.len().saturating_sub(1)),
+                        OpenMode::Recent => {
+                            (MAX_RECENTS - 2, self.recent_roms.len().saturating_sub(2))
+                        }
                     };
                     if self.selected < total {
                         self.selected += 1;

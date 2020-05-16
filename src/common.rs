@@ -109,7 +109,7 @@ pub fn create_png<P: AsRef<Path>>(
     }
     let png_file = BufWriter::new(png_file.unwrap()); // Safe to unwrap
     let mut png = png::Encoder::new(png_file, width, height);
-    png.set_color(png::ColorType::RGB);
+    png.set_color(png::ColorType::RGBA);
     let writer = png.write_header();
     if let Err(e) = writer {
         return nes_err!("failed to save screenshot {:?}: {}", png_path.display(), e);
