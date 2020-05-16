@@ -51,34 +51,22 @@ pub fn create_png<P: AsRef<Path>>(
 ///
 /// If rom_path is a `.nes` file, uses that
 /// If no arg[1], searches current directory for `.nes` files
-pub fn find_roms<P: AsRef<Path>>(path: &P) -> NesResult<Vec<String>> {
+pub fn find_roms<P: AsRef<Path>>(path: &P) -> NesResult<Vec<PathBuf>> {
     use std::ffi::OsStr;
-    let mut roms: Vec<String> = Vec::new();
+    let mut roms: Vec<PathBuf> = Vec::new();
     let path = path.as_ref();
     if path.is_dir() {
         path.read_dir()
             .map_err(|e| map_nes_err!("unable to read directory {:?}: {}", path, e))?
             .filter_map(|f| f.ok())
             .filter(|f| f.path().extension() == Some(OsStr::new("nes")))
-            .for_each(|f| {
-                if let Some(p) = f.path().to_str() {
-                    roms.push(p.to_string())
-                }
-            });
+            .for_each(|f| roms.push(f.path()));
     } else if path.is_file() {
-        if let Some(p) = path.to_str() {
-            roms.push(p.to_string());
-        } else {
-            nes_err!("invalid path: {:?}", path)?;
-        }
+        roms.push(path.to_path_buf());
     } else {
         nes_err!("invalid path: {:?}", path)?;
     }
-    if roms.is_empty() {
-        nes_err!("no rom files found or specified in {:?}", path)
-    } else {
-        Ok(roms)
-    }
+    Ok(roms)
 }
 
 /// Returns the path where battery-backed Save RAM files are stored

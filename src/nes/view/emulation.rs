@@ -1,11 +1,10 @@
-use super::Viewable;
+use super::{ViewType, Viewable};
 use crate::{
+    common::Powered,
     control_deck::{ControlDeck, RENDER_HEIGHT, RENDER_WIDTH},
     input::InputButton,
-    nes::{
-        keybinding::{Action, Keybind},
-        state::NesState,
-    },
+    map_nes_err,
+    nes::{action::Action, filesystem, keybinding::Keybind, state::NesState},
     NesResult,
 };
 use pix_engine::{
@@ -14,7 +13,11 @@ use pix_engine::{
     pixel::ColorType,
     StateData,
 };
-use std::{fs::File, io::BufReader, path::Path};
+use std::{
+    fs::File,
+    io::{BufReader, BufWriter},
+    path::Path,
+};
 
 const TEXTURE_NAME: &str = "emulation";
 
@@ -44,9 +47,65 @@ impl EmulationView {
         }
     }
 
-    pub fn load_rom<P: AsRef<Path>>(&mut self, _path: &P) -> NesResult<()> {
-        // TODO convert Read filehandle
-        // self.deck.load_rom(path)
+    pub fn load_rom<P: AsRef<Path>>(&mut self, path: &P) -> NesResult<()> {
+        let path = path.as_ref();
+        let rom =
+            File::open(path).map_err(|e| map_nes_err!("unable to open file {:?}: {}", path, e))?;
+        let mut rom = BufReader::new(rom);
+        self.deck
+            .load_rom(&path.to_string_lossy(), &mut rom)
+            .map_err(|e| map_nes_err!("failed to load rom {:?}: {}", path, e))?;
+        self.load_sram(&path)?;
+        self.deck.power_on();
+        Ok(())
+    }
+
+    pub fn unload_rom<P: AsRef<Path>>(&mut self, path: &P) -> NesResult<()> {
+        let path = path.as_ref();
+        self.save_sram(&path)?;
+        self.deck.power_off();
+        Ok(())
+    }
+
+    fn load_sram<P: AsRef<Path>>(&mut self, path: &P) -> NesResult<()> {
+        if self.deck.uses_sram() {
+            let sram_path = filesystem::sram_path(path)?;
+            if sram_path.exists() {
+                let sram_file = File::open(&sram_path).map_err(|e| {
+                    map_nes_err!("failed to open file {:?}: {}", sram_path.display(), e)
+                })?;
+                let mut sram = BufReader::new(sram_file);
+                self.deck.load_sram(&mut sram)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn save_sram<P: AsRef<Path>>(&mut self, path: &P) -> NesResult<()> {
+        if self.deck.uses_sram() {
+            let sram_path = filesystem::sram_path(path)?;
+            let sram_dir = sram_path.parent().expect("sram path shouldn't be root"); // Safe to do because sram_path is never root
+            if !sram_dir.exists() {
+                std::fs::create_dir_all(sram_dir).map_err(|e| {
+                    map_nes_err!("failed to create directory {:?}: {}", sram_dir.display(), e)
+                })?;
+            }
+            let mut sram_opts = std::fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .open(&sram_path)
+                .map_err(|e| {
+                    map_nes_err!("failed to open file {:?}: {}", sram_path.display(), e)
+                })?;
+
+            let exists = sram_opts.metadata()?.len() > 0;
+            if exists {
+                self.deck.validate_save(&mut sram_opts)?;
+            }
+            let mut sram = BufWriter::new(sram_opts);
+            self.deck.save_sram(&mut sram, !exists)?;
+        }
         Ok(())
     }
 
@@ -54,7 +113,7 @@ impl EmulationView {
         if !self.paused {
             self.running_time += elapsed;
             self.deck.clock_frame();
-            if state.preferences.sound_enabled {
+            if state.prefs.sound_enabled {
                 data.enqueue_audio(&self.deck.audio_samples());
             }
             self.deck.clear_samples();
@@ -72,29 +131,37 @@ impl EmulationView {
         let repeat = false;
         // TODO move this out to a file
         let default_bindings = [
-            (Key::Z, pressed, repeat, Action::P1A),
-            (Key::X, pressed, repeat, Action::P1B),
-            (Key::RShift, pressed, repeat, Action::P1Select),
-            (Key::Return, pressed, repeat, Action::P1Start),
-            (Key::Up, pressed, repeat, Action::P1Up),
-            (Key::Down, pressed, repeat, Action::P1Down),
-            (Key::Left, pressed, repeat, Action::P1Left),
-            (Key::Right, pressed, repeat, Action::P1Right),
-            (Key::Z, !pressed, repeat, Action::P1A),
-            (Key::X, !pressed, repeat, Action::P1B),
-            (Key::RShift, !pressed, repeat, Action::P1Select),
-            (Key::Return, !pressed, repeat, Action::P1Start),
-            (Key::Up, !pressed, repeat, Action::P1Up),
-            (Key::Down, !pressed, repeat, Action::P1Down),
-            (Key::Left, !pressed, repeat, Action::P1Left),
-            (Key::Right, !pressed, repeat, Action::P1Right),
+            (Key::Z, pressed, repeat, None, Action::PA(1)),
+            (Key::X, pressed, repeat, None, Action::PB(1)),
+            (Key::RShift, pressed, repeat, None, Action::PSelect(1)),
+            (Key::Return, pressed, repeat, None, Action::PStart(1)),
+            (Key::Up, pressed, repeat, None, Action::PUp(1)),
+            (Key::Down, pressed, repeat, None, Action::PDown(1)),
+            (Key::Left, pressed, repeat, None, Action::PLeft(1)),
+            (Key::Right, pressed, repeat, None, Action::PRight(1)),
+            (Key::Z, !pressed, repeat, None, Action::PA(1)),
+            (Key::X, !pressed, repeat, None, Action::PB(1)),
+            (Key::RShift, !pressed, repeat, None, Action::PSelect(1)),
+            (Key::Return, !pressed, repeat, None, Action::PStart(1)),
+            (Key::Up, !pressed, repeat, None, Action::PUp(1)),
+            (Key::Down, !pressed, repeat, None, Action::PDown(1)),
+            (Key::Left, !pressed, repeat, None, Action::PLeft(1)),
+            (Key::Right, !pressed, repeat, None, Action::PRight(1)),
+            (
+                Key::O,
+                pressed,
+                repeat,
+                Some(&[PixEvent::KeyPress(Key::Ctrl, true, false)][..]),
+                Action::OpenView(ViewType::OpenRom),
+            ),
         ];
 
-        for (key, pressed, repeat, action) in &default_bindings {
+        for (key, pressed, repeat, modifiers, action) in &default_bindings {
             let keybind = Keybind::new(
                 PixEvent::KeyPress(*key, *pressed, false),
                 *pressed,
                 *repeat,
+                *modifiers,
                 *action,
             );
             self.keybindings.push(keybind);
@@ -103,14 +170,8 @@ impl EmulationView {
 }
 
 impl Viewable for EmulationView {
-    fn on_start(&mut self, _state: &mut NesState, data: &mut StateData) -> NesResult<bool> {
-        // TODO
-        let rom_name = "roms/castlevania_iii_draculas_curse.nes";
-        let file = File::open(rom_name).expect("valid path");
-        let mut buffer = BufReader::new(file);
-        self.deck.load_rom(rom_name, &mut buffer)?;
-        // TODO self.control_deck.power_on()
-        // TODO move the src Rect dimensions to video settings for trim top
+    fn on_start(&mut self, state: &mut NesState, data: &mut StateData) -> NesResult<bool> {
+        self.load_keybindings();
         data.create_texture(
             TEXTURE_NAME,
             ColorType::Rgba,
@@ -118,10 +179,11 @@ impl Viewable for EmulationView {
             Rect::new(self.x, self.y, self.width, self.height),
         )?;
 
-        self.load_keybindings();
-
-        self.paused = false;
-
+        if let Some(rom) = &state.loaded_rom {
+            println!("Loading {:?}", rom);
+            self.load_rom(rom)?;
+            self.deck.power_on();
+        }
         Ok(true)
     }
 
@@ -131,28 +193,29 @@ impl Viewable for EmulationView {
         state: &mut NesState,
         data: &mut StateData,
     ) -> NesResult<bool> {
-        // TODO check if window is focused for pause in BG preference
         // TODO ability to adjust emulation speed, separate from frame rate
         self.step_emulation(elapsed, state, data);
         self.update_view(data)?;
         Ok(true)
     }
 
-    fn on_stop(&mut self, _state: &mut NesState, _data: &mut StateData) -> NesResult<bool> {
+    fn on_stop(&mut self, state: &mut NesState, _data: &mut StateData) -> NesResult<bool> {
         // TODO save_replay
-        // self.control_deck.power_off()
         self.paused = true;
+        if let Some(rom) = &state.loaded_rom {
+            self.unload_rom(rom)?;
+        }
         Ok(true)
     }
 
     fn on_pause(&mut self, _state: &mut NesState, _data: &mut StateData) -> NesResult<bool> {
-        self.paused = !self.paused;
+        self.paused = true;
         // TODO add message overlay
         Ok(true)
     }
 
     fn on_resume(&mut self, _state: &mut NesState, _data: &mut StateData) -> NesResult<bool> {
-        self.paused = !self.paused;
+        self.paused = false;
         // TODO remove message overlay
         Ok(true)
     }
@@ -161,38 +224,45 @@ impl Viewable for EmulationView {
         &mut self,
         event: &PixEvent,
         state: &mut NesState,
-        data: &mut StateData,
+        _data: &mut StateData,
     ) -> NesResult<bool> {
         let keybind = self
             .keybindings
             .iter()
             .find(|&keybind| keybind.event == *event);
         if let Some(keybind) = keybind {
-            let button = match keybind.action {
-                Action::P1A => Some(InputButton::P1A),
-                Action::P1B => Some(InputButton::P1B),
-                Action::P1Select => Some(InputButton::P1Select),
-                Action::P1Start => Some(InputButton::P1Start),
-                Action::P1Up => Some(InputButton::P1Up),
-                Action::P1Down => Some(InputButton::P1Down),
-                Action::P1Left => Some(InputButton::P1Left),
-                Action::P1Right => Some(InputButton::P1Right),
-                Action::P2A => Some(InputButton::P2A),
-                Action::P2B => Some(InputButton::P2B),
-                Action::P2Select => Some(InputButton::P2Select),
-                Action::P2Start => Some(InputButton::P2Start),
-                Action::P2Up => Some(InputButton::P2Up),
-                Action::P2Down => Some(InputButton::P2Down),
-                Action::P2Left => Some(InputButton::P2Left),
-                Action::P2Right => Some(InputButton::P2Right),
-                _ => None, // No input for this action
-            };
-            if let Some(button) = button {
-                self.deck.input_button(button, keybind.pressed);
+            for _ in 0..4 {
+                let button = match keybind.action {
+                    Action::PA(player) => Some(InputButton::PA(player)),
+                    Action::PB(player) => Some(InputButton::PB(player)),
+                    Action::PSelect(player) => Some(InputButton::PSelect(player)),
+                    Action::PStart(player) => Some(InputButton::PStart(player)),
+                    Action::PUp(player) => Some(InputButton::PUp(player)),
+                    Action::PDown(player) => Some(InputButton::PDown(player)),
+                    Action::PLeft(player) => Some(InputButton::PLeft(player)),
+                    Action::PRight(player) => Some(InputButton::PRight(player)),
+                    _ => None, // No  input for this action
+                };
+                if let Some(button) = button {
+                    self.deck.input_button(button, keybind.pressed);
+                }
+            }
+
+            let mut all_pressed = true;
+            for modifier in &keybind.modifiers {
+                all_pressed &= state.is_event_pressed(modifier);
+            }
+
+            if all_pressed {
+                state.queue_action(keybind.action);
             }
             Ok(true)
         } else {
             Ok(false)
         }
+    }
+
+    fn view_type(&self) -> ViewType {
+        ViewType::Emulation
     }
 }

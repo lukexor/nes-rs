@@ -4,13 +4,16 @@ use crate::{
 };
 use include_dir::{include_dir, Dir};
 use pix_engine::PixEngine;
+use preferences::Preferences;
 use state::NesState;
-use view::{views::*, View};
+use view::View;
 
+pub mod preferences;
+
+mod action;
 mod event;
 mod filesystem;
 mod keybinding;
-mod preferences;
 mod state;
 mod view;
 
@@ -18,9 +21,8 @@ const APP_NAME: &str = "TetaNES";
 // This includes static assets as a binary during installation
 const _STATIC_DIR: Dir = include_dir!("./static");
 const ICON_PATH: &str = "static/tetanes_icon.png";
-const DEFAULT_SCALE: u32 = 3;
-const DEFAULT_WIDTH: u32 = DEFAULT_SCALE * RENDER_WIDTH;
-const DEFAULT_HEIGHT: u32 = DEFAULT_SCALE * RENDER_HEIGHT;
+const DEFAULT_WIDTH: u32 = RENDER_WIDTH;
+const DEFAULT_HEIGHT: u32 = RENDER_HEIGHT;
 const DEFAULT_VSYNC: bool = true;
 
 pub struct Nes {
@@ -29,23 +31,31 @@ pub struct Nes {
     height: u32,
     should_close: bool,
     has_focus: bool,
+    paused: bool,
+    bg_paused: bool,
     state: NesState,
     views: Vec<View>,
 }
 
 impl Nes {
-    pub fn new() -> Self {
-        let width = DEFAULT_WIDTH;
-        let height = DEFAULT_HEIGHT;
-        Self {
+    pub fn new() -> NesResult<Self> {
+        Self::with_prefs(Preferences::default())
+    }
+
+    pub fn with_prefs(prefs: Preferences) -> NesResult<Self> {
+        let width = prefs.scale * DEFAULT_WIDTH;
+        let height = prefs.scale * DEFAULT_HEIGHT;
+        Ok(Self {
             title: APP_NAME.to_string(),
             width,
             height,
             should_close: false,
             has_focus: false,
-            state: NesState::new(),
-            views: vec![EmulationView::new(width, height).into()],
-        }
+            paused: false,
+            bg_paused: false,
+            state: NesState::with_prefs(prefs)?,
+            views: Vec::new(),
+        })
     }
 
     pub fn run(self) -> NesResult<()> {
@@ -60,11 +70,5 @@ impl Nes {
         engine.run()?;
 
         Ok(())
-    }
-}
-
-impl Default for Nes {
-    fn default() -> Self {
-        Self::new()
     }
 }

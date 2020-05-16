@@ -97,13 +97,12 @@ pub fn load_rom<F: Read>(name: &str, rom: &mut F) -> NesResult<MapperType> {
     let mapper = match cart.header.mapper_num {
         0 => Nrom::load(cart),
         1 => Sxrom::load(cart),
-        2 => Uxrom::load(cart),
+        2 | 71 => Uxrom::load(cart), // TODO 71 is mostly a clone of Uxrom, but some differences
         3 => Cnrom::load(cart),
         4 => Txrom::load(cart),
         5 => Exrom::load(cart),
         7 => Axrom::load(cart),
         9 => Pxrom::load(cart),
-        71 => Uxrom::load(cart), // TODO: Mapper 71 has slight differences from Uxrom
         _ => nes_err!("unsupported mapper number: {}", cart.header.mapper_num)?,
     };
     Ok(mapper)

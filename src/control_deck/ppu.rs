@@ -102,7 +102,7 @@ impl Ppu {
             frame: Frame::new(),
             frame_complete: false,
             ntsc_video: true,
-            nes_format: NesFormat::Ntsc,
+            nes_format: NesFormat::Ntsc, // TODO NesFormat should be a passed in option
             clock_remainder: 0,
             debug: false,
             nt_scanline: 0,
@@ -298,7 +298,7 @@ impl Ppu {
                 self.regs.copy_x();
             }
 
-            // TODO - This should be split up instead of being done all at once
+            // TODO - fix evaluate sprites - this should be split up cross cycles instead of being done all at once
             // The code block below this simulates the reads required, but
             // its not ideal
             if self.cycle == SPRITE_PREFETCH_CYCLE_START {

@@ -3,7 +3,7 @@
 //! Converts primative types and arrays of primatives from/to Big-Endian byte arrays and writes
 //! them to a file handle that implements Read/Write.
 
-use crate::{control_deck::MapperType, nes_err, NesResult};
+use crate::{control_deck::MapperType, nes_err, NesResult, MAJOR_VERSION};
 use enum_dispatch::enum_dispatch;
 use std::{
     collections::VecDeque,
@@ -13,12 +13,11 @@ use std::{
 const SAVE_FILE_MAGIC_LEN: usize = 8;
 const SAVE_FILE_MAGIC: [u8; SAVE_FILE_MAGIC_LEN] = *b"TETANES\x1a";
 // MAJOR version of SemVer. Increases when save file format isn't backwards compatible
-const VERSION: u8 = 0;
 
 /// Writes a header including a magic string and a version
 pub fn write_save_header<F: Write>(fh: &mut F) -> NesResult<()> {
     SAVE_FILE_MAGIC.save(fh)?;
-    VERSION.save(fh)
+    MAJOR_VERSION.save(fh)
 }
 
 pub fn validate_save_header<F: Read>(fh: &mut F) -> NesResult<()> {
@@ -29,10 +28,10 @@ pub fn validate_save_header<F: Read>(fh: &mut F) -> NesResult<()> {
     } else {
         let mut version = 0u8;
         version.load(fh)?;
-        if version != VERSION {
+        if version != MAJOR_VERSION {
             nes_err!(
                 "invalid save file version. current: {}, save file: {}",
-                VERSION,
+                MAJOR_VERSION,
                 version,
             )
         } else {

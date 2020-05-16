@@ -16,24 +16,25 @@ const STROBE_DOWN: u8 = 5;
 const STROBE_LEFT: u8 = 6;
 const STROBE_RIGHT: u8 = 7;
 
+/// Player inputs (1-4)
 #[rustfmt::skip]
 #[derive(Debug, PartialEq, Eq)]
 pub enum InputButton {
-    P1A, P1B, P1Select, P1Start, P1Up, P1Down, P1Left, P1Right,
-    P2A, P2B, P2Select, P2Start, P2Up, P2Down, P2Left, P2Right,
+    PA(u8), PATurbo(u8), PB(u8), PBTurbo(u8), PSelect(u8), PStart(u8),
+    PUp(u8), PDown(u8), PLeft(u8), PRight(u8),
 }
 
 /// Represents an NES Joypad
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Copy, Clone)]
 pub struct Gamepad {
     pub left: bool,
     pub right: bool,
     pub up: bool,
     pub down: bool,
     pub a: bool,
+    pub a_turbo: bool,
     pub b: bool,
-    pub turbo_a: bool,
-    pub turbo_b: bool,
+    pub b_turbo: bool,
     pub select: bool,
     pub start: bool,
     pub strobe_state: u8,
@@ -86,8 +87,7 @@ impl Powered for Gamepad {
 /// Input containing gamepad input state
 #[derive(Default, Clone)]
 pub struct Input {
-    pub gamepad1: Gamepad,
-    pub gamepad2: Gamepad,
+    pub gamepads: [Gamepad; 4],
     pub zapper: Zapper,
     open_bus: u8,
 }
@@ -96,8 +96,7 @@ impl Input {
     /// Returns an empty Input instance with no event pump
     pub fn new() -> Self {
         Self {
-            gamepad1: Gamepad::default(),
-            gamepad2: Gamepad::default(),
+            gamepads: [Gamepad::default(); 4],
             zapper: Zapper::default(),
             open_bus: 0u8,
         }
@@ -107,8 +106,8 @@ impl Input {
 impl MemRead for Input {
     fn read(&mut self, addr: u16) -> u8 {
         let val = match addr {
-            0x4016 => self.gamepad1.next_state() | 0x40,
-            0x4017 => self.gamepad2.next_state() | 0x40,
+            0x4016 => self.gamepads[0].next_state() | 0x40,
+            0x4017 => self.gamepads[1].next_state() | 0x40,
             _ => self.open_bus,
         };
         self.open_bus = val;
@@ -117,8 +116,8 @@ impl MemRead for Input {
 
     fn peek(&self, addr: u16) -> u8 {
         match addr {
-            0x4016 => self.gamepad1.peek_state() | 0x40,
-            0x4017 => self.gamepad2.peek_state() | 0x40,
+            0x4016 => self.gamepads[0].peek_state() | 0x40,
+            0x4017 => self.gamepads[1].peek_state() | 0x40,
             _ => self.open_bus,
         }
     }
@@ -128,16 +127,16 @@ impl MemWrite for Input {
     fn write(&mut self, addr: u16, val: u8) {
         self.open_bus = val;
         if addr == 0x4016 && val == 0 {
-            self.gamepad1.reset();
-            self.gamepad2.reset();
+            self.gamepads[0].reset();
+            self.gamepads[1].reset();
         }
     }
 }
 
 impl Powered for Input {
     fn reset(&mut self) {
-        self.gamepad1.reset();
-        self.gamepad2.reset();
+        self.gamepads[0].reset();
+        self.gamepads[1].reset();
     }
 }
 

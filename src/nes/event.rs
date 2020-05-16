@@ -11,6 +11,7 @@ impl Nes {
                 self.has_focus = focused;
             }
             if self.has_focus {
+                self.state.set_event_pressed(&event);
                 self.handle_event(&event, data)?;
             }
         }
@@ -22,7 +23,7 @@ impl Nes {
     }
 
     fn handle_event(&mut self, event: &PixEvent, data: &mut StateData) -> NesResult<()> {
-        for view in &mut self.views {
+        for view in self.views.iter_mut().rev() {
             if view.handle_event(event, &mut self.state, data)? {
                 break;
             }

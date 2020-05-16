@@ -459,6 +459,9 @@
     html_logo_url = "https://raw.githubusercontent.com/lukexor/tetanes/master/static/tetanes_icon.png"
 )]
 
+// MAJOR SEMVER Version
+pub const MAJOR_VERSION: u8 = 0;
+
 use pix_engine::PixEngineErr;
 use std::fmt;
 

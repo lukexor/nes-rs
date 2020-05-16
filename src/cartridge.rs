@@ -56,13 +56,13 @@ impl Cartridge {
     ///
     /// If the file is not a valid '.nes' file, or there are insufficient permissions to read the
     /// file, then an error is returned.
-    pub fn from_rom<F: Read>(name: &str, mut rom_data: &mut F) -> NesResult<Self> {
-        let header = INesHeader::load(&mut rom_data)
+    pub fn from_rom<F: Read>(name: &str, mut rom: &mut F) -> NesResult<Self> {
+        let header = INesHeader::load(&mut rom)
             .map_err(|e| map_nes_err!("invalid rom \"{}\": {}", name, e))?;
 
         let mut prg_rom = vec![0u8; (header.prg_rom_size as usize) * PRG_ROM_BANK_SIZE];
-        rom_data.read_exact(&mut prg_rom).map_err(|e| {
-            let bytes_rem = if let Ok(bytes) = rom_data.read_to_end(&mut prg_rom) {
+        rom.read_exact(&mut prg_rom).map_err(|e| {
+            let bytes_rem = if let Ok(bytes) = rom.read_to_end(&mut prg_rom) {
                 bytes.to_string()
             } else {
                 "unknown".to_string()
@@ -79,8 +79,8 @@ impl Cartridge {
         let prg_rom = Memory::rom_from_bytes(&prg_rom);
 
         let mut chr_rom = vec![0u8; (header.chr_rom_size as usize) * CHR_ROM_BANK_SIZE];
-        rom_data.read_exact(&mut chr_rom).map_err(|e| {
-            let bytes_rem = if let Ok(bytes) = rom_data.read_to_end(&mut chr_rom) {
+        rom.read_exact(&mut chr_rom).map_err(|e| {
+            let bytes_rem = if let Ok(bytes) = rom.read_to_end(&mut chr_rom) {
                 bytes.to_string()
             } else {
                 "unknown".to_string()
@@ -190,9 +190,9 @@ impl INesHeader {
     }
 
     /// Parses a slice of `u8` bytes and returns a valid INesHeader instance
-    pub fn load<F: Read>(rom_data: &mut F) -> NesResult<Self> {
+    pub fn load<F: Read>(rom: &mut F) -> NesResult<Self> {
         let mut header = [0u8; 16];
-        rom_data.read_exact(&mut header)?;
+        rom.read_exact(&mut header)?;
 
         // Header checks
         if header[0..4] != *b"NES\x1a" {

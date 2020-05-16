@@ -1,11 +1,13 @@
 use crate::{
     common::{Clocked, Powered},
     input::InputButton,
-    serialization::Savable,
+    map_nes_err, nes_err,
+    serialization::{validate_save_header, write_save_header, Savable},
     NesResult,
 };
 use bus::Bus;
 use cpu::Cpu;
+use mapper::Mapper;
 use std::io::{Read, Write};
 
 mod apu;
@@ -20,9 +22,9 @@ pub use ppu::{RENDER_HEIGHT, RENDER_WIDTH};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum NesFormat {
-    NTSC,
-    PAL,
-    DENDY,
+    Ntsc,
+    Pal,
+    Dendy,
 }
 
 pub struct ControlDeck {
@@ -43,8 +45,40 @@ impl ControlDeck {
         Ok(())
     }
 
+    pub fn load_sram(&mut self, mut sram: &mut dyn Read) -> NesResult<()> {
+        match validate_save_header(&mut sram) {
+            Ok(_) => self
+                .cpu
+                .bus
+                .mapper
+                .load_sram(&mut sram)
+                .map_err(|e| map_nes_err!("failed to load save ram: {}", e)),
+            Err(e) => nes_err!("failed to validate save ram header: {}.", e),
+        }
+    }
+
+    pub fn save_sram(&mut self, mut sram: &mut dyn Write, is_new: bool) -> NesResult<()> {
+        if is_new {
+            write_save_header(&mut sram)
+                .map_err(|e| map_nes_err!("failed to write save ram header: {}", e))?;
+        }
+        self.cpu
+            .bus
+            .mapper
+            .save_sram(&mut sram)
+            .map_err(|e| map_nes_err!("failed to write save ram: {}", e))
+    }
+
+    pub fn validate_save(&self, mut sram: &mut dyn Read) -> NesResult<()> {
+        validate_save_header(&mut sram)
+    }
+
+    pub fn uses_sram(&self) -> bool {
+        self.cpu.bus.mapper.battery_backed()
+    }
+
     pub fn clock_frame(&mut self) {
-        // TODO Refactor this
+        // TODO Refactor bus interaction
         while !self.cpu.bus.ppu.frame_complete {
             let _ = self.clock();
         }
@@ -67,26 +101,21 @@ impl ControlDeck {
     }
 
     pub fn input_button(&mut self, button: InputButton, pressed: bool) {
-        let mut p1 = &mut self.cpu.bus.input.gamepad1;
-        let mut p2 = &mut self.cpu.bus.input.gamepad2;
-        match button {
-            // TODO Turbo
-            InputButton::P1A => p1.a = pressed,
-            InputButton::P1B => p1.b = pressed,
-            InputButton::P1Select => p1.select = pressed,
-            InputButton::P1Start => p1.start = pressed,
-            InputButton::P1Up => p1.up = pressed,
-            InputButton::P1Down => p1.down = pressed,
-            InputButton::P1Left => p1.left = pressed,
-            InputButton::P1Right => p1.right = pressed,
-            InputButton::P2A => p2.a = pressed,
-            InputButton::P2B => p2.b = pressed,
-            InputButton::P2Select => p2.select = pressed,
-            InputButton::P2Start => p2.start = pressed,
-            InputButton::P2Up => p2.up = pressed,
-            InputButton::P2Down => p2.down = pressed,
-            InputButton::P2Left => p2.left = pressed,
-            InputButton::P2Right => p2.right = pressed,
+        for player in 1u8..=4 {
+            let mut input = &mut self.cpu.bus.input.gamepads[player as usize - 1];
+            match button {
+                InputButton::PA(p) if p == player => input.a = pressed,
+                InputButton::PB(p) if p == player => input.b = pressed,
+                InputButton::PATurbo(p) if p == player => input.a_turbo = pressed,
+                InputButton::PBTurbo(p) if p == player => input.b_turbo = pressed,
+                InputButton::PSelect(p) if p == player => input.select = pressed,
+                InputButton::PStart(p) if p == player => input.start = pressed,
+                InputButton::PUp(p) if p == player => input.up = pressed,
+                InputButton::PDown(p) if p == player => input.down = pressed,
+                InputButton::PLeft(p) if p == player => input.left = pressed,
+                InputButton::PRight(p) if p == player => input.right = pressed,
+                _ => (),
+            }
         }
     }
 }
@@ -99,21 +128,22 @@ impl Clocked for ControlDeck {
 
 impl Powered for ControlDeck {
     fn power_on(&mut self) {
-        // TODO
-        // load sram
+        self.cpu.power_on();
+        // TODO load sram
     }
     fn power_off(&mut self) {
-        // TODO
-        // save sram
+        self.cpu.power_off();
+        // TODO save sram
     }
 }
 
-// TODO impl Savable for ControlDeck
 impl Savable for ControlDeck {
     fn save<F: Write>(&self, fh: &mut F) -> NesResult<()> {
+        self.cpu.save(fh)?;
         Ok(())
     }
     fn load<F: Read>(&mut self, fh: &mut F) -> NesResult<()> {
+        self.cpu.load(fh)?;
         Ok(())
     }
 }
