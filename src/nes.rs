@@ -3,7 +3,7 @@ use crate::{
     NesResult,
 };
 use include_dir::include_dir;
-use pix_engine::PixEngine;
+use pix_engine::prelude::*;
 use preferences::Preferences;
 use state::NesState;
 use view::View;
@@ -22,13 +22,13 @@ const APP_NAME: &str = "TetaNES";
 const ICON_PATH: &str = "static/tetanes_icon.png";
 const DEFAULT_WIDTH: u32 = RENDER_WIDTH;
 const DEFAULT_HEIGHT: u32 = RENDER_HEIGHT;
-const DEFAULT_VSYNC: bool = true;
 
 #[derive(Debug)]
 pub struct Nes {
     title: String,
     width: u32,
     height: u32,
+    scale: f32,
     should_close: bool,
     has_focus: bool,
     paused: bool,
@@ -40,13 +40,11 @@ pub struct Nes {
 impl Nes {
     pub fn with_prefs(prefs: Preferences) -> NesResult<Self> {
         let _ = include_dir!("./static");
-
-        let width = prefs.scale * DEFAULT_WIDTH;
-        let height = prefs.scale * DEFAULT_HEIGHT;
         Ok(Self {
             title: APP_NAME.to_string(),
-            width,
-            height,
+            width: DEFAULT_WIDTH,
+            height: DEFAULT_HEIGHT,
+            scale: prefs.scale,
             should_close: false,
             has_focus: false,
             paused: false,
@@ -56,17 +54,15 @@ impl Nes {
         })
     }
 
-    pub fn run(self) -> NesResult<()> {
-        let nes_state = self;
-        let title = nes_state.title.to_owned();
-        let width = nes_state.width;
-        let height = nes_state.height;
-
-        let mut engine = PixEngine::new(title, nes_state, width, height, DEFAULT_VSYNC)?;
-        let _ = engine.set_icon(ICON_PATH); // Ignore if this fails
-
-        engine.run()?;
-
+    pub fn run(&mut self) -> NesResult<()> {
+        let mut engine = PixEngine::create(&self.title, self.width, self.height)
+            .position_centered()
+            .resizable()
+            .scale(self.scale, self.scale)
+            .vsync_enabled()
+            .icon(ICON_PATH)
+            .build()?;
+        engine.run(self)?;
         Ok(())
     }
 }

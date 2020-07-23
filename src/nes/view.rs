@@ -1,6 +1,6 @@
 use crate::{nes::state::NesState, NesResult};
 use enum_dispatch::enum_dispatch;
-use pix_engine::{event::PixEvent, StateData};
+use pix_engine::{event::Event, State};
 use views::*;
 
 mod emulation;
@@ -29,32 +29,22 @@ pub enum ViewType {
 
 #[enum_dispatch(View)]
 pub trait Viewable {
-    fn on_start(&mut self, _state: &mut NesState, _data: &mut StateData) -> NesResult<bool> {
+    fn on_start(&mut self, _state: &mut NesState, _s: &mut State) -> NesResult<bool> {
         Ok(true)
     }
-    fn on_update(
-        &mut self,
-        _elapsed: f32,
-        _state: &mut NesState,
-        _data: &mut StateData,
-    ) -> NesResult<bool> {
+    fn on_update(&mut self, _state: &mut NesState, _s: &mut State) -> NesResult<bool> {
         Ok(true)
     }
-    fn on_stop(&mut self, _state: &mut NesState, _data: &mut StateData) -> NesResult<bool> {
+    fn on_stop(&mut self, _state: &mut NesState, _s: &mut State) -> NesResult<bool> {
         Ok(true)
     }
-    fn on_pause(&mut self, _state: &mut NesState, _data: &mut StateData) -> NesResult<bool> {
+    fn on_pause(&mut self, _state: &mut NesState, _s: &mut State) -> NesResult<bool> {
         Ok(true)
     }
-    fn on_resume(&mut self, _state: &mut NesState, _data: &mut StateData) -> NesResult<bool> {
+    fn on_resume(&mut self, _state: &mut NesState, _s: &mut State) -> NesResult<bool> {
         Ok(true)
     }
-    fn handle_event(
-        &mut self,
-        _event: &PixEvent,
-        _state: &mut NesState,
-        _data: &mut StateData,
-    ) -> bool {
+    fn handle_event(&mut self, _event: &Event, _state: &mut NesState, _s: &mut State) -> bool {
         false
     }
     fn is_active(&self) -> bool {

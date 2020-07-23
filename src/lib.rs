@@ -450,7 +450,7 @@
 //! [sdl2]: https://www.libsdl.org/
 //! [wasm]: https://webassembly.org/
 
-#![warn(missing_debug_implementations, rust_2018_idioms, missing_docs)]
+// #![warn(missing_debug_implementations, rust_2018_idioms, missing_docs)]
 #![doc(
     html_favicon_url = "https://raw.githubusercontent.com/lukexor/tetanes/master/static/tetanes_icon.png"
 )]
@@ -461,7 +461,7 @@
 // Major SEMVER Version
 pub const MAJOR_VERSION: u8 = 0;
 
-use pix_engine::PixEngineErr;
+use pix_engine::PixError;
 use std::fmt;
 
 pub mod cartridge;
@@ -545,14 +545,14 @@ impl From<std::string::FromUtf8Error> for NesErr {
     }
 }
 
-impl From<NesErr> for PixEngineErr {
+impl From<NesErr> for PixError {
     fn from(err: NesErr) -> Self {
-        Self::new(&err.to_string())
+        PixError::Other(err.to_string().into())
     }
 }
 
-impl From<PixEngineErr> for NesErr {
-    fn from(err: PixEngineErr) -> Self {
+impl From<PixError> for NesErr {
+    fn from(err: PixError) -> Self {
         Self::new(&err.to_string())
     }
 }

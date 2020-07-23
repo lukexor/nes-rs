@@ -56,9 +56,9 @@ impl Frame {
             return;
         }
         let idx = 4 * (x + y * RENDER_WIDTH) as usize;
-        self.pixels[idx] = red;
+        self.pixels[idx + 0] = blue;
         self.pixels[idx + 1] = green;
-        self.pixels[idx + 2] = blue;
+        self.pixels[idx + 2] = red;
         self.pixels[idx + 3] = 255;
     }
 

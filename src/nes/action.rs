@@ -3,7 +3,7 @@ use super::{
     Nes,
 };
 use crate::NesResult;
-use pix_engine::StateData;
+use pix_engine::State;
 use std::path::PathBuf;
 
 /// UI Actions that can be performed and mapped to user events
@@ -24,13 +24,13 @@ pub enum Action {
 }
 
 impl Nes {
-    pub fn open_view(&mut self, view_type: ViewType, data: &mut StateData) -> NesResult<()> {
+    pub fn open_view(&mut self, view_type: ViewType, data: &mut State) -> NesResult<()> {
         if let Some(view) = self.views.last_mut() {
             view.on_pause(&mut self.state, data)?;
         }
         let mut view: View = match view_type {
             ViewType::Emulation => EmulationView::new(&self.state.prefs).into(),
-            ViewType::OpenRom => OpenRomView::new(self.state.prefs.scale).into(),
+            ViewType::OpenRom => OpenRomView::new().into(),
             _ => unimplemented!("View not implemented yet"),
         };
         view.on_start(&mut self.state, data)?;
@@ -39,7 +39,7 @@ impl Nes {
         Ok(())
     }
 
-    pub fn close_view(&mut self, data: &mut StateData) -> NesResult<()> {
+    pub fn close_view(&mut self, data: &mut State) -> NesResult<()> {
         if self.views.len() == 1 && self.views[0].view_type() != ViewType::OpenRom {
             let _ = self.views.pop();
             self.state.queue_action(Action::OpenView(ViewType::OpenRom));
@@ -54,7 +54,7 @@ impl Nes {
         Ok(())
     }
 
-    pub fn load_rom(&mut self, rom: PathBuf, data: &mut StateData) -> NesResult<()> {
+    pub fn load_rom(&mut self, rom: PathBuf, data: &mut State) -> NesResult<()> {
         while let Some(view) = &mut self.views.pop() {
             view.on_stop(&mut self.state, data)?;
         }

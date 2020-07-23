@@ -11,7 +11,7 @@ use crate::{
     NesResult,
 };
 use chrono::prelude::{DateTime, Local};
-use pix_engine::{draw::Rect, event::PixEvent, image::Image, pixel::ColorType, StateData};
+use pix_engine::prelude::*;
 use std::{
     fs::File,
     io::{BufReader, BufWriter},
@@ -22,19 +22,18 @@ const TEXTURE_NAME: &str = "emulation";
 
 #[derive(Debug)]
 pub struct EmulationView {
-    scale: u32,
+    texture_id: usize,
     deck: ControlDeck,
     loaded_title: String,
-    running_time: f32,
+    running_time: f64,
     paused: bool,
 }
 
 impl EmulationView {
     pub fn new(prefs: &Preferences) -> Self {
-        let scale = prefs.scale;
         let config = Config::from_prefs(prefs);
         Self {
-            scale,
+            texture_id: 0,
             deck: ControlDeck::with_config(config),
             loaded_title: String::new(),
             running_time: 0.0,
@@ -44,51 +43,51 @@ impl EmulationView {
 
     #[rustfmt::skip]
     pub fn default_keybindings() -> Vec<Keybind> {
-        use Action::*;
-        use pix_engine::event::{
-            Key::*,
-            PixEvent::*,
-        };
-        use ViewType::*;
+        // use Action::*;
+        // use pix_engine::event::{
+        //     Key::*,
+        //     Event::*,
+        // };
+        // use ViewType::*;
 
         let mut binds: Vec<Keybind> = Vec::new();
-        let press = true;
-        let rpt = true;
-        let no_mods = &[][..];
-        let ctrl = &[KeyPress(Ctrl, press, !rpt)][..];
+        // let press = true;
+        // let rpt = true;
+        // let no_mods = &[][..];
+        // let ctrl = &[KeyPress(Ctrl, press, !rpt)][..];
 
-        // Player 1 Keyboard
-        for pressed in [true, false].iter() {
-            binds.push(Keybind::new(KeyPress(Z, *pressed, !rpt), Emulation, no_mods, PA(1)));
-            binds.push(Keybind::new(KeyPress(X, *pressed, !rpt), Emulation, no_mods, PB(1)));
-            binds.push(Keybind::new(KeyPress(A, *pressed, !rpt), Emulation, no_mods, PATurbo(1)));
-            binds.push(Keybind::new(KeyPress(S, *pressed, !rpt), Emulation, no_mods, PBTurbo(1)));
-            binds.push(Keybind::new(KeyPress(RShift, *pressed, !rpt), Emulation, no_mods, PSelect(1)));
-            binds.push(Keybind::new(KeyPress(Return, *pressed, !rpt), Emulation, no_mods, PStart(1)));
-            binds.push(Keybind::new(KeyPress(Up, *pressed, !rpt), Emulation, no_mods, PUp(1)));
-            binds.push(Keybind::new(KeyPress(Down, *pressed, !rpt), Emulation, no_mods, PDown(1)));
-            binds.push(Keybind::new(KeyPress(Left, *pressed, !rpt), Emulation, no_mods, PLeft(1)));
-            binds.push(Keybind::new(KeyPress(Right, *pressed, !rpt), Emulation, no_mods, PRight(1)));
-        }
+        // // Player 1 Keyboard
+        // for pressed in [true, false].iter() {
+        //     binds.push(Keybind::new(KeyPress(Z, *pressed, !rpt), Emulation, no_mods, PA(1)));
+        //     binds.push(Keybind::new(KeyPress(X, *pressed, !rpt), Emulation, no_mods, PB(1)));
+        //     binds.push(Keybind::new(KeyPress(A, *pressed, !rpt), Emulation, no_mods, PATurbo(1)));
+        //     binds.push(Keybind::new(KeyPress(S, *pressed, !rpt), Emulation, no_mods, PBTurbo(1)));
+        //     binds.push(Keybind::new(KeyPress(RShift, *pressed, !rpt), Emulation, no_mods, PSelect(1)));
+        //     binds.push(Keybind::new(KeyPress(Return, *pressed, !rpt), Emulation, no_mods, PStart(1)));
+        //     binds.push(Keybind::new(KeyPress(Up, *pressed, !rpt), Emulation, no_mods, PUp(1)));
+        //     binds.push(Keybind::new(KeyPress(Down, *pressed, !rpt), Emulation, no_mods, PDown(1)));
+        //     binds.push(Keybind::new(KeyPress(Left, *pressed, !rpt), Emulation, no_mods, PLeft(1)));
+        //     binds.push(Keybind::new(KeyPress(Right, *pressed, !rpt), Emulation, no_mods, PRight(1)));
+        // }
 
         // Player 1-4 Controller
         // TODO
 
         // Menu Keyboard
-        binds.push(Keybind::new(KeyPress(Escape, press, !rpt), Emulation, no_mods, OpenView(Menu)));
-        binds.push(Keybind::new(KeyPress(F1, press, !rpt), Emulation, no_mods, OpenView(Help)));
-        binds.push(Keybind::new(KeyPress(O, press, !rpt), Emulation, ctrl, OpenView(OpenRom)));
-        binds.push(Keybind::new(KeyPress(Q, press, !rpt), Emulation, ctrl, Action::Quit));
-        binds.push(Keybind::new(KeyPress(R, press, !rpt), Emulation, ctrl, Reset));
-        binds.push(Keybind::new(KeyPress(P, press, !rpt), Emulation, ctrl, PowerCycle));
-        binds.push(Keybind::new(KeyPress(Equals, press, !rpt), Emulation, ctrl, IncSpeed));
-        binds.push(Keybind::new(KeyPress(Minus, press, !rpt), Emulation, ctrl, DecSpeed));
-        binds.push(Keybind::new(KeyPress(Space, press, !rpt), Emulation, no_mods, FastForward));
-        binds.push(Keybind::new(KeyPress(Space, !press, !rpt), Emulation, no_mods, FastForward));
-        binds.push(Keybind::new(KeyPress(Num1, press, !rpt), Emulation, no_mods, SetSaveSlot(1)));
-        binds.push(Keybind::new(KeyPress(Num2, press, !rpt), Emulation, no_mods, SetSaveSlot(2)));
-        binds.push(Keybind::new(KeyPress(Num3, press, !rpt), Emulation, no_mods, SetSaveSlot(3)));
-        binds.push(Keybind::new(KeyPress(Num4, press, !rpt), Emulation, no_mods, SetSaveSlot(4)));
+        // binds.push(Keybind::new(KeyPress(Escape, press, !rpt), Emulation, no_mods, OpenView(Menu)));
+        // binds.push(Keybind::new(KeyPress(F1, press, !rpt), Emulation, no_mods, OpenView(Help)));
+        // binds.push(Keybind::new(KeyPress(O, press, !rpt), Emulation, ctrl, OpenView(OpenRom)));
+        // binds.push(Keybind::new(KeyPress(Q, press, !rpt), Emulation, ctrl, Action::Quit));
+        // binds.push(Keybind::new(KeyPress(R, press, !rpt), Emulation, ctrl, Reset));
+        // binds.push(Keybind::new(KeyPress(P, press, !rpt), Emulation, ctrl, PowerCycle));
+        // binds.push(Keybind::new(KeyPress(Equals, press, !rpt), Emulation, ctrl, IncSpeed));
+        // binds.push(Keybind::new(KeyPress(Minus, press, !rpt), Emulation, ctrl, DecSpeed));
+        // binds.push(Keybind::new(KeyPress(Space, press, !rpt), Emulation, no_mods, FastForward));
+        // binds.push(Keybind::new(KeyPress(Space, !press, !rpt), Emulation, no_mods, FastForward));
+        // binds.push(Keybind::new(KeyPress(Num1, press, !rpt), Emulation, no_mods, SetSaveSlot(1)));
+        // binds.push(Keybind::new(KeyPress(Num2, press, !rpt), Emulation, no_mods, SetSaveSlot(2)));
+        // binds.push(Keybind::new(KeyPress(Num3, press, !rpt), Emulation, no_mods, SetSaveSlot(3)));
+        // binds.push(Keybind::new(KeyPress(Num4, press, !rpt), Emulation, no_mods, SetSaveSlot(4)));
 
         // Menu Controller
         // TODO
@@ -158,20 +157,20 @@ impl EmulationView {
         Ok(())
     }
 
-    fn step_emulation(&mut self, elapsed: f32, state: &mut NesState, data: &mut StateData) {
+    fn step_emulation(&mut self, state: &mut NesState, s: &mut State) {
         if !self.paused {
-            self.running_time += elapsed;
+            self.running_time += s.delta_time();
             self.deck.clock_frame();
             if state.prefs.sound_enabled {
-                data.enqueue_audio(&self.deck.audio_samples());
+                s.enqueue_audio(&self.deck.audio_samples());
             }
             self.deck.clear_samples();
         }
     }
 
-    fn update_view(&self, data: &mut StateData) -> NesResult<()> {
+    fn update_view(&self, s: &mut State) -> NesResult<()> {
         // TODO change this to draw_image
-        data.copy_texture(TEXTURE_NAME, &self.deck.frame())?;
+        s.draw_pixels(&self.deck.frame(), 4 * RENDER_WIDTH as usize)?;
         Ok(())
     }
 
@@ -187,7 +186,7 @@ impl EmulationView {
             .format("Screen_Shot_%Y-%m-%d_at_%H_%M_%S")
             .to_string();
         let image = Image::from_bytes(RENDER_WIDTH, RENDER_HEIGHT, &self.deck.frame())?;
-        image.save_to_file(&filename)?;
+        image.save(&filename)?;
         println!("Saved screenshot: {:?}", filename);
         Ok(())
     }
@@ -211,24 +210,18 @@ impl EmulationView {
             _ => None, // No input for this action
         };
         if let Some(button) = button {
-            if let PixEvent::KeyPress(_key, pressed, _repeat) = keybind.event {
-                self.deck.input_button(button, pressed);
-                return true;
-            }
+            // if let Event::KeyPress(_key, pressed, _repeat) = keybind.event {
+            //     self.deck.input_button(button, pressed);
+            //     return true;
+            // }
         }
         false
     }
 }
 
 impl Viewable for EmulationView {
-    fn on_start(&mut self, state: &mut NesState, data: &mut StateData) -> NesResult<bool> {
-        data.create_texture(
-            TEXTURE_NAME,
-            ColorType::Rgba,
-            Rect::new(0, 0, RENDER_WIDTH, RENDER_HEIGHT),
-            Rect::new(0, 0, self.scale * RENDER_WIDTH, self.scale * RENDER_HEIGHT),
-        )?;
-
+    fn on_start(&mut self, state: &mut NesState, s: &mut State) -> NesResult<bool> {
+        // self.texture_id = s.create_texture(RENDER_WIDTH, RENDER_HEIGHT)?;
         self.configure_deck(&state.prefs);
         if let Some(rom) = &state.loaded_rom {
             self.load_rom(rom)?;
@@ -237,19 +230,14 @@ impl Viewable for EmulationView {
         Ok(true)
     }
 
-    fn on_update(
-        &mut self,
-        elapsed: f32,
-        state: &mut NesState,
-        data: &mut StateData,
-    ) -> NesResult<bool> {
+    fn on_update(&mut self, state: &mut NesState, s: &mut State) -> NesResult<bool> {
         // TODO ability to adjust emulation speed, separate from frame rate
-        self.step_emulation(elapsed, state, data);
-        self.update_view(data)?;
+        self.step_emulation(state, s);
+        self.update_view(s)?;
         Ok(true)
     }
 
-    fn on_stop(&mut self, state: &mut NesState, _data: &mut StateData) -> NesResult<bool> {
+    fn on_stop(&mut self, state: &mut NesState, _s: &mut State) -> NesResult<bool> {
         // TODO save_replay
         self.paused = true;
         if let Some(rom) = &state.loaded_rom {
@@ -259,24 +247,19 @@ impl Viewable for EmulationView {
         Ok(true)
     }
 
-    fn on_pause(&mut self, _state: &mut NesState, _data: &mut StateData) -> NesResult<bool> {
+    fn on_pause(&mut self, _state: &mut NesState, _s: &mut State) -> NesResult<bool> {
         self.paused = true;
         // TODO add message overlay
         Ok(true)
     }
 
-    fn on_resume(&mut self, _state: &mut NesState, _data: &mut StateData) -> NesResult<bool> {
+    fn on_resume(&mut self, _state: &mut NesState, _s: &mut State) -> NesResult<bool> {
         self.paused = false;
         // TODO remove message overlay
         Ok(true)
     }
 
-    fn handle_event(
-        &mut self,
-        event: &PixEvent,
-        state: &mut NesState,
-        _data: &mut StateData,
-    ) -> bool {
+    fn handle_event(&mut self, event: &Event, state: &mut NesState, _s: &mut State) -> bool {
         if let Some(keybind) = event::match_keybinding(event, self.view_type(), state) {
             if !self.handle_gamepad_input(&keybind) {
                 state.queue_action(keybind.action);

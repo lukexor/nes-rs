@@ -7,7 +7,7 @@ use super::{
     Nes,
 };
 use crate::{common::Powered, NesResult};
-use pix_engine::{event::PixEvent, PixEngineResult, State, StateData};
+use pix_engine::{event::Event, PixResult, State, Stateful};
 use std::{
     collections::{HashSet, VecDeque},
     path::PathBuf,
@@ -45,32 +45,33 @@ impl NesState {
         })
     }
 
-    pub fn set_event_pressed(&mut self, event: &PixEvent) {
-        match event {
-            PixEvent::KeyPress(key, ..) => {
-                let key = format!("{}", *key as u8);
-                self.held_keys.insert(key);
-            }
-            PixEvent::GamepadBtn(id, btn, ..) => {
-                let key = format!("{}{}", id, *btn as u8);
-                self.held_buttons.insert(key);
-            }
-            _ => (),
-        }
+    pub fn set_event_pressed(&mut self, event: &Event) {
+        // match event {
+        //     Event::KeyPress(key, ..) => {
+        //         let key = format!("{}", *key as u8);
+        //         self.held_keys.insert(key);
+        //     }
+        //     Event::GamepadBtn(id, btn, ..) => {
+        //         let key = format!("{}{}", id, *btn as u8);
+        //         self.held_buttons.insert(key);
+        //     }
+        //     _ => (),
+        // }
     }
 
-    pub fn is_event_pressed(&self, event: &PixEvent) -> bool {
-        match event {
-            PixEvent::KeyPress(key, ..) => {
-                let key = format!("{}", *key as u8);
-                self.held_keys.get(&key).is_some()
-            }
-            PixEvent::GamepadBtn(id, btn, ..) => {
-                let key = format!("{}{}", id, *btn as u8);
-                self.held_buttons.get(&key).is_some()
-            }
-            _ => false,
-        }
+    pub fn is_event_pressed(&self, event: &Event) -> bool {
+        false
+        // match event {
+        //     Event::KeyPress(key, ..) => {
+        //         let key = format!("{}", *key as u8);
+        //         self.held_keys.get(&key).is_some()
+        //     }
+        //     Event::GamepadBtn(id, btn, ..) => {
+        //         let key = format!("{}{}", id, *btn as u8);
+        //         self.held_buttons.get(&key).is_some()
+        //     }
+        //     _ => false,
+        // }
     }
 
     pub fn queue_action(&mut self, action: Action) {
@@ -79,41 +80,41 @@ impl NesState {
 }
 
 impl Nes {
-    fn update_title(&mut self, _data: &mut StateData) -> NesResult<()> {
+    fn update_title(&mut self, _s: &mut State) -> NesResult<()> {
         // TODO update_title
         Ok(())
     }
 
-    fn check_has_focus(&mut self, data: &mut StateData) -> NesResult<()> {
-        if self.state.prefs.pause_in_bg {
-            if !self.has_focus {
-                // If we don't have focus and not already paused, pause while
-                // in BG
-                if !self.paused {
-                    self.bg_paused = true;
-                }
-                self.paused = true;
-                if let Some(view) = self.views.last_mut() {
-                    view.on_pause(&mut self.state, data)?;
-                }
-            } else if self.bg_paused {
-                // Otherwise unpause if we paused due to backgrounding
-                self.bg_paused = false;
-                self.paused = false;
-                if let Some(view) = self.views.last_mut() {
-                    view.on_resume(&mut self.state, data)?;
-                }
-            }
-        }
+    fn check_has_focus(&mut self, s: &mut State) -> NesResult<()> {
+        // if self.state.prefs.pause_in_bg {
+        //     if !self.has_focus {
+        //         // If we don't have focus and not already paused, pause while
+        //         // in BG
+        //         if !self.paused {
+        //             self.bg_paused = true;
+        //         }
+        //         self.paused = true;
+        //         if let Some(view) = self.views.last_mut() {
+        //             view.on_pause(&mut self.state, s)?;
+        //         }
+        //     } else if self.bg_paused {
+        //         // Otherwise unpause if we paused due to backgrounding
+        //         self.bg_paused = false;
+        //         self.paused = false;
+        //         if let Some(view) = self.views.last_mut() {
+        //             view.on_resume(&mut self.state, s)?;
+        //         }
+        //     }
+        // }
         Ok(())
     }
 
-    fn handle_action(&mut self, data: &mut StateData) -> NesResult<()> {
+    fn handle_action(&mut self, s: &mut State) -> NesResult<()> {
         while let Some(action) = self.state.action_queue.pop_front() {
             match action {
-                Action::OpenView(view_type) => self.open_view(view_type, data)?,
-                Action::CloseView => self.close_view(data)?,
-                Action::LoadRom(rom) => self.load_rom(rom, data)?,
+                Action::OpenView(view_type) => self.open_view(view_type, s)?,
+                Action::CloseView => self.close_view(s)?,
+                Action::LoadRom(rom) => self.load_rom(rom, s)?,
                 _ => (),
             }
         }
@@ -121,8 +122,8 @@ impl Nes {
     }
 }
 
-impl State for Nes {
-    fn on_start(&mut self, _data: &mut StateData) -> PixEngineResult<bool> {
+impl Stateful for Nes {
+    fn on_start(&mut self, _s: &mut State) -> PixResult<bool> {
         self.power_on();
         // Initial view is emulation only if a given rom is passed in on the command line
         // Queuing this will call on_start
@@ -135,14 +136,14 @@ impl State for Nes {
         Ok(true)
     }
 
-    fn on_update(&mut self, elapsed: f32, data: &mut StateData) -> PixEngineResult<bool> {
-        self.poll_events(data)?;
-        self.check_has_focus(data)?;
-        self.handle_action(data)?;
-        self.update_title(data)?;
+    fn on_update(&mut self, s: &mut State) -> PixResult<bool> {
+        self.poll_events(s)?;
+        self.check_has_focus(s)?;
+        self.handle_action(s)?;
+        self.update_title(s)?;
         if !self.should_close {
             for view in &mut self.views {
-                view.on_update(elapsed, &mut self.state, data)?;
+                view.on_update(&mut self.state, s)?;
             }
             Ok(true)
         } else {
@@ -150,9 +151,9 @@ impl State for Nes {
         }
     }
 
-    fn on_stop(&mut self, data: &mut StateData) -> PixEngineResult<bool> {
+    fn on_stop(&mut self, s: &mut State) -> PixResult<bool> {
         for view in &mut self.views {
-            view.on_stop(&mut self.state, data)?;
+            view.on_stop(&mut self.state, s)?;
         }
         self.power_off();
         Ok(true)

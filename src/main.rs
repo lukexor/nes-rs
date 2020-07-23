@@ -27,7 +27,7 @@ fn main() -> NesResult<()> {
 
     let opt = Opt::from_args();
     let prefs = Preferences::new(opt.path)?;
-    let nes = Nes::with_prefs(prefs)?;
+    let mut nes = Nes::with_prefs(prefs)?;
     nes.run().or_else(|e| {
         eprintln!("Error: {}", e);
         std::process::exit(1);

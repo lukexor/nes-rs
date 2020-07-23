@@ -5,16 +5,16 @@ use super::{
     Nes,
 };
 use crate::NesResult;
-use pix_engine::{event::PixEvent, StateData};
+use pix_engine::prelude::*;
 
 impl Nes {
-    pub fn poll_events(&mut self, data: &mut StateData) -> NesResult<()> {
+    pub fn poll_events(&mut self, data: &mut State) -> NesResult<()> {
         let events = self.get_events(data);
         for event in events {
             // Only process events if focused
-            if let PixEvent::Focus(_, focused) = event {
-                self.has_focus = focused;
-            }
+            // if let Event::Focus(_, focused) = event {
+            //     self.has_focus = focused;
+            // }
             if self.has_focus {
                 self.state.set_event_pressed(&event);
                 self.handle_event(&event, data)?;
@@ -23,11 +23,12 @@ impl Nes {
         Ok(())
     }
 
-    fn get_events(&self, data: &mut StateData) -> Vec<PixEvent> {
-        data.poll()
+    fn get_events(&self, data: &mut State) -> Vec<Event> {
+        Vec::new()
+        // data.poll()
     }
 
-    fn handle_event(&mut self, event: &PixEvent, data: &mut StateData) -> NesResult<()> {
+    fn handle_event(&mut self, event: &Event, data: &mut State) -> NesResult<()> {
         for view in self.views.iter_mut().rev() {
             if view.handle_event(event, &mut self.state, data) {
                 break;
@@ -37,11 +38,7 @@ impl Nes {
     }
 }
 
-pub fn match_keybinding(
-    event: &PixEvent,
-    view_type: ViewType,
-    state: &NesState,
-) -> Option<Keybind> {
+pub fn match_keybinding(event: &Event, view_type: ViewType, state: &NesState) -> Option<Keybind> {
     let keybind = state
         .keybindings
         .iter()

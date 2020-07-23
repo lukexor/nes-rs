@@ -73,7 +73,7 @@ pub fn add_recent_rom<P: AsRef<Path>>(rom: &P, image: Image) -> NesResult<()> {
     // Save rom screenshot
     let rom_file = rom.as_ref().file_name().expect("valid rom path");
     let image_file = recents_dir.join(rom_file).with_extension("png");
-    image.save_to_file(image_file.to_str().unwrap())?;
+    image.save(image_file.to_str().unwrap())?;
 
     // If recent games exist, load them
     let mut recents: HashSet<String> = HashSet::new();
